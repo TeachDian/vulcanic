@@ -95,6 +95,7 @@ class _SceneChromeState extends State<SceneChrome> {
     final banner = widget.banner;
     final showControls = widget.showControls;
     final modeAction = widget.modeAction;
+    final shortScreen = MediaQuery.sizeOf(context).height < 720;
     return Scaffold(
       backgroundColor: Palette.ink,
       body: Stack(
@@ -151,16 +152,26 @@ class _SceneChromeState extends State<SceneChrome> {
                     alignment: Alignment.topRight,
                     child: Padding(
                       padding: const EdgeInsets.only(top: 60),
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: showControls ? 1 : 0,
-                        child: IgnorePointer(
-                          ignoring: !showControls,
-                          child: ViewRail(
-                            controller: controller,
-                            extra: widget.viewActions,
-                          ),
-                        ),
+                      child: ListenableBuilder(
+                        listenable: controller,
+                        builder: (context, _) {
+                          // On a short screen the detail card reaches up to
+                          // the rail, so the rail steps aside for it.
+                          final showRail =
+                              showControls &&
+                              !(shortScreen && controller.selected != null);
+                          return AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: showRail ? 1 : 0,
+                            child: IgnorePointer(
+                              ignoring: !showRail,
+                              child: ViewRail(
+                                controller: controller,
+                                extra: widget.viewActions,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
