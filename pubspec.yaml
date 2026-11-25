@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   mobile_scanner: ^7.5.0
+  qr: ^4.0.1
   vector_math: any
 
 

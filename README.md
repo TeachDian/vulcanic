@@ -12,6 +12,8 @@ Work in progress — features land one pull request at a time.
 - **Home** — a live volcano and the ways to view it.
 - **Surface** — markerless AR. ARCore detects a table or floor, a tap anchors
   the volcano there, and you can walk around it.
+- **Marker** — marker-based AR. The volcano stands on a printed marker and
+  follows it; cover or remove the marker and it fades out.
 - **3D explorer** — the model on its own: drag to orbit, pinch to zoom.
 - **How it works** — illustrated instructions.
 
@@ -49,6 +51,26 @@ camera feed with the volcano placed wherever you tap, using an assumed
 camera pose (`lib/ar/placement.dart`). It is not anchored to the world. The
 grid button's neighbour in the top bar switches between the two on phones
 that support both, which is handy for demonstrating the difference.
+
+## Marker tracking
+
+Print a marker from [`docs/markers/`](docs/markers), or open *Markers* in the
+app on a second screen.
+
+- Each marker is a card with a QR code that carries its identity
+  (`VULCANIC:01`, `VULCANIC:02`), drawn by `lib/ui/marker_card.dart`. The app
+  shows different content per marker: 02 opens straight into the cutaway.
+- ML Kit finds the code and reports its four corners in the camera image.
+- `lib/ar/marker_pose.dart` turns those four corners into a 3D pose. It fits
+  the homography from the flat square to its image, then factors that into a
+  rotation and a translation. Distances are in units of the code's width, so
+  the marker can be printed at any size and the volcano scales with it.
+- `MarkerTracker` eases between detections and reports the marker lost when
+  they stop, which fades the volcano out.
+
+This path needs only a camera, so it works on phones without ARCore. It
+assumes a typical field of view, because the scanner does not report the
+lens intrinsics.
 
 ## The model
 

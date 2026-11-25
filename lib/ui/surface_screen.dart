@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../ar/ar_session.dart';
+import '../ar/camera_start.dart';
 import '../ar/placement.dart';
 import '../ar/tracking_painter.dart';
 import '../engine/scene_frame.dart';
@@ -460,23 +461,7 @@ class _ScreenSurfaceState extends State<_ScreenSurface> {
   @override
   void initState() {
     super.initState();
-    _startPreview();
-  }
-
-  /// Opens the camera, allowing a moment for an AR session that was just
-  /// closed to let go of it.
-  Future<void> _startPreview() async {
-    for (final wait in const [350, 900, 1800]) {
-      await Future<void>.delayed(Duration(milliseconds: wait));
-      if (!mounted) return;
-      try {
-        await _preview.start();
-      } on MobileScannerException catch (_) {
-        // Still busy; try again.
-      }
-      // A failed start is also reported through the controller's value.
-      if (!mounted || _preview.value.isRunning) return;
-    }
+    startCamera(_preview, stillWanted: () => mounted);
   }
 
   /// Where the volcano stands on the assumed surface; null until laid out.

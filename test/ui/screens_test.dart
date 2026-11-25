@@ -10,7 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vulcanic/engine/volcano_geometry.dart';
 import 'package:vulcanic/ui/explorer_screen.dart';
 import 'package:vulcanic/ui/guide_screen.dart';
+import 'package:vulcanic/content/markers.dart';
 import 'package:vulcanic/ui/home_screen.dart';
+import 'package:vulcanic/ui/marker_card.dart';
+import 'package:vulcanic/ui/marker_card_screen.dart';
 import 'package:vulcanic/ui/theme.dart';
 
 final _shot = GlobalKey();
@@ -134,5 +137,54 @@ void main() {
     await advance(tester, 1);
     expect(find.text('COMPONENT 01 OF 05'), findsOneWidget);
     await save(tester, 'screen_explorer_short');
+  });
+
+  testWidgets('the marker gallery shows both markers', (tester) async {
+    await pumpScreen(tester, const MarkerCardScreen());
+    await advance(tester, 1);
+    expect(find.text('MARKER 01 OF 02'), findsOneWidget);
+    expect(find.text('Volcano'), findsOneWidget);
+    await save(tester, 'screen_markers');
+
+    await tester.drag(find.byType(PageView), const Offset(-320, 0));
+    await advance(tester, 1);
+    expect(find.text('MARKER 02 OF 02'), findsOneWidget);
+  });
+
+  // Writes the printable markers when asked to:
+  //   flutter test test/ui/screens_test.dart --dart-define=PRINT_MARKERS=true
+  testWidgets('renders the printable markers', (tester) async {
+    for (final marker in VulcanicMarker.values) {
+      tester.view
+        ..physicalSize = const Size(1500, 1920)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: ColoredBox(
+            color: Colors.white,
+            child: Center(
+              child: RepaintBoundary(
+                key: key,
+                child: SizedBox(width: 1500, child: MarkerCard(marker: marker)),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text(marker.title), findsOneWidget);
+      if (!const bool.fromEnvironment('PRINT_MARKERS')) continue;
+      final boundary =
+          key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        final data = await image.toByteData(format: ui.ImageByteFormat.png);
+        final dir = Directory('docs/markers')..createSync(recursive: true);
+        File('${dir.path}/marker-${marker.number}-${marker.slug}.png')
+            .writeAsBytesSync(data!.buffer.asUint8List());
+      });
+    }
   });
 }

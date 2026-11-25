@@ -46,6 +46,30 @@ const List<GuideSection> guideSections = [
           'volcano there.',
     ),
   ]),
+  GuideSection('MARKER · MARKER-BASED', 'Stand it on the marker', [
+    GuideStep(
+      Icons.print_rounded,
+      'Get a marker',
+      'Print one from the project, or open Markers in this app on a second '
+          'screen.',
+    ),
+    GuideStep(
+      Icons.center_focus_weak_rounded,
+      'Point the camera at it',
+      'Keep the whole code in view. An outline shows that it is recognised.',
+    ),
+    GuideStep(
+      Icons.open_with_rounded,
+      'Move the marker',
+      'The volcano follows it. Cover the marker or take it away and the '
+          'volcano fades until it is back.',
+    ),
+    GuideStep(
+      Icons.filter_2_rounded,
+      'Try the second marker',
+      'Each marker shows its own content: marker 02 opens the cutaway.',
+    ),
+  ]),
   GuideSection('ONCE IT IS PLACED', 'Handle the volcano', [
     GuideStep(
       Icons.swipe_rounded,

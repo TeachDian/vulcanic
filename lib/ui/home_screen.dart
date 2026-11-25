@@ -10,6 +10,8 @@ import '../engine/volcano_geometry.dart';
 import '../engine/volcano_view.dart';
 import 'explorer_screen.dart';
 import 'guide_screen.dart';
+import 'marker_card_screen.dart';
+import 'marker_screen.dart';
 import 'scene/controls.dart';
 import 'surface_screen.dart';
 import 'theme.dart';
@@ -92,6 +94,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     const _Wordmark(),
                     const Spacer(),
                     GlassIconButton(
+                      icon: Icons.qr_code_2_rounded,
+                      tooltip: 'Markers',
+                      onPressed: () => _open(const MarkerCardScreen()),
+                    ),
+                    const SizedBox(width: 10),
+                    GlassIconButton(
                       icon: Icons.menu_book_rounded,
                       tooltip: 'How it works',
                       onPressed: () => _open(const GuideScreen()),
@@ -118,13 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             _open(SurfaceScreen(geometry: widget.geometry)),
                       ),
                     ),
-                    const Expanded(
+                    Expanded(
                       child: _ModeCard(
                         title: 'Marker',
                         caption: 'On the printed card',
                         glyph: _Glyph.marker,
-                        tag: 'Next',
-                        onTap: null,
+                        onTap: () =>
+                            _open(MarkerScreen(geometry: widget.geometry)),
                       ),
                     ),
                   ],
@@ -181,8 +189,7 @@ class _ModeCard extends StatelessWidget {
     required this.caption,
     required this.glyph,
     required this.onTap,
-    this.tag,
-  });
+  }) : tag = null;
 
   final String title;
   final String caption;
