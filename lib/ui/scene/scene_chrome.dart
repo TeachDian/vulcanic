@@ -71,6 +71,25 @@ class SceneChrome extends StatelessWidget {
               ),
             ),
           ),
+          // And the controls legible at the bottom.
+          const IgnorePointer(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(
+                height: 340,
+                width: double.infinity,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [Color(0xB3000000), Color(0x00000000)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
           SafeArea(
             minimum: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: ListenableBuilder(

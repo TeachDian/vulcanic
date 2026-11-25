@@ -20,6 +20,32 @@ class GuideSection {
 }
 
 const List<GuideSection> guideSections = [
+  GuideSection('SURFACE · MARKERLESS', 'Stand it on a table', [
+    GuideStep(
+      Icons.screen_rotation_alt_rounded,
+      'Scan the surface',
+      'Point at a table or floor and move the phone slowly. A lit, '
+          'patterned surface is found fastest.',
+    ),
+    GuideStep(
+      Icons.grid_on_rounded,
+      'Wait for the grid',
+      'Detected surfaces are outlined, and a ring shows where the volcano '
+          'would stand.',
+    ),
+    GuideStep(
+      Icons.touch_app_rounded,
+      'Tap to place',
+      'The volcano is anchored there. Walk around it; Move lets you place '
+          'it again.',
+    ),
+    GuideStep(
+      Icons.phonelink_erase_rounded,
+      'No AR on your phone?',
+      'The app switches to screen placement: tap anywhere to put the '
+          'volcano there.',
+    ),
+  ]),
   GuideSection('ONCE IT IS PLACED', 'Handle the volcano', [
     GuideStep(
       Icons.swipe_rounded,

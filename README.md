@@ -10,6 +10,8 @@ Work in progress — features land one pull request at a time.
 ## The app
 
 - **Home** — a live volcano and the ways to view it.
+- **Surface** — markerless AR. ARCore detects a table or floor, a tap anchors
+  the volcano there, and you can walk around it.
 - **3D explorer** — the model on its own: drag to orbit, pinch to zoom.
 - **How it works** — illustrated instructions.
 
@@ -19,6 +21,34 @@ shortcuts to the five components, and a detail card for the selected one.
 
 The interface is set in [Sora](https://github.com/sora-xor/sora-font)
 (SIL Open Font License, see `assets/fonts/OFL.txt`).
+
+## Markerless tracking
+
+ARCore does the tracking; Flutter draws everything.
+
+```
+ARCore session (Kotlin, own GL thread)
+  ├─ camera image ──► Flutter texture ──► Texture widget
+  └─ per frame: view + projection matrices, anchor pose,
+     plane outlines, feature points, light estimate
+                     └─► EventChannel ──► ArFrame ──► painters
+```
+
+- `android/.../ar/ArSessionRunner.kt` runs the session and packs each frame.
+- `lib/ar/ar_session.dart` decodes it; `lib/ui/surface_screen.dart` turns it
+  into the screen: detected planes and feature points are drawn as an
+  overlay, a ring shows where a tap would land, and a tap hit-tests the
+  plane and creates an anchor.
+- The status pill and the hint above the dock report tracking quality and
+  the reason when it degrades (too dark, moving too fast, too little
+  surface detail).
+
+**Phones without ARCore** are detected at run time
+(`ArCoreApk.checkAvailability`) and get *screen placement* instead: the
+camera feed with the volcano placed wherever you tap, using an assumed
+camera pose (`lib/ar/placement.dart`). It is not anchored to the world. The
+grid button's neighbour in the top bar switches between the two on phones
+that support both, which is handy for demonstrating the difference.
 
 ## The model
 
