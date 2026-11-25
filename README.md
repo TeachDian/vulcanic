@@ -7,6 +7,19 @@ marker, trigger an eruption, open a cutaway, and explore its five components.
 
 Work in progress — features land one pull request at a time.
 
+## The app
+
+- **Home** — a live volcano and the ways to view it.
+- **3D explorer** — the model on its own: drag to orbit, pinch to zoom.
+- **How it works** — illustrated instructions.
+
+Every mode shares one set of controls (`lib/ui/scene/`): the eruption
+trigger with its four-step timeline, the cutaway and label toggles, numbered
+shortcuts to the five components, and a detail card for the selected one.
+
+The interface is set in [Sora](https://github.com/sora-xor/sora-font)
+(SIL Open Font License, see `assets/fonts/OFL.txt`).
+
 ## The model
 
 The volcano is assembled from five separately modeled components, each a

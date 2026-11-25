@@ -18,6 +18,7 @@ class VolcanoView extends StatefulWidget {
     required this.controller,
     required this.frameFor,
     this.labelStyle,
+    this.labelInsets = EdgeInsets.zero,
     this.animate = true,
   });
 
@@ -25,6 +26,9 @@ class VolcanoView extends StatefulWidget {
   final VolcanoController controller;
   final SceneFrame? Function(Size size) frameFor;
   final TextStyle? labelStyle;
+
+  /// Margins that labels keep clear of, e.g. for controls along an edge.
+  final EdgeInsets labelInsets;
 
   /// Set to false to freeze the scene (used by tests).
   final bool animate;
@@ -78,6 +82,7 @@ class _VolcanoViewState extends State<VolcanoView>
           widget.controller,
           widget.frameFor,
           widget.labelStyle,
+          widget.labelInsets,
         ),
       ),
     );
@@ -85,13 +90,19 @@ class _VolcanoViewState extends State<VolcanoView>
 }
 
 class _ScenePainter extends CustomPainter {
-  _ScenePainter(this.renderer, this.controller, this.frameFor, this.labelStyle)
-    : super(repaint: controller.frame);
+  _ScenePainter(
+    this.renderer,
+    this.controller,
+    this.frameFor,
+    this.labelStyle,
+    this.labelInsets,
+  ) : super(repaint: controller.frame);
 
   final SceneRenderer renderer;
   final VolcanoController controller;
   final SceneFrame? Function(Size size) frameFor;
   final TextStyle? labelStyle;
+  final EdgeInsets labelInsets;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -99,7 +110,14 @@ class _ScenePainter extends CustomPainter {
     if (frame == null) return;
     canvas.save();
     canvas.clipRect(Offset.zero & size);
-    renderer.paint(canvas, size, frame, controller, labelStyle: labelStyle);
+    renderer.paint(
+      canvas,
+      size,
+      frame,
+      controller,
+      labelStyle: labelStyle,
+      labelInsets: labelInsets,
+    );
     canvas.restore();
   }
 
@@ -108,5 +126,6 @@ class _ScenePainter extends CustomPainter {
       old.renderer != renderer ||
       old.controller != controller ||
       old.frameFor != frameFor ||
-      old.labelStyle != labelStyle;
+      old.labelStyle != labelStyle ||
+      old.labelInsets != labelInsets;
 }
