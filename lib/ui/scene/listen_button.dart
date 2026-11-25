@@ -65,41 +65,31 @@ class _ListenButtonState extends State<ListenButton>
       button: true,
       label: speaking ? 'Stop reading' : 'Listen to this description',
       excludeSemantics: true,
-      child: Material(
-        color: speaking ? Palette.ember : Palette.ember.withValues(alpha: 0.16),
-        shape: const StadiumBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            _narrator.toggle(widget.part);
-          },
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 20, 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 10,
-              children: [
-                SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: speaking
-                      ? CustomPaint(painter: _Bars(_bars))
-                      : const Icon(
-                          Icons.volume_up_rounded,
-                          size: 20,
-                          color: Palette.ember,
-                        ),
-                ),
-                Text(
-                  speaking ? 'Stop' : 'Listen',
-                  style: AppText.label.copyWith(
-                    fontSize: 13.5,
-                    color: speaking ? const Color(0xFF1A0E08) : Palette.ember,
-                  ),
-                ),
-              ],
-            ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          _narrator.toggle(widget.part);
+        },
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(0, 12, 14, 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 10,
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: speaking
+                    ? CustomPaint(painter: _Bars(_bars))
+                    : const Icon(
+                        Icons.volume_up_rounded,
+                        size: 20,
+                        color: Palette.bone,
+                      ),
+              ),
+              Text(speaking ? 'Stop' : 'Listen', style: AppText.label),
+            ],
           ),
         ),
       ),
@@ -115,7 +105,7 @@ class _Bars extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF1A0E08)
+      ..color = Palette.bone
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
     const count = 4;

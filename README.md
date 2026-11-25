@@ -69,6 +69,21 @@ sequence (magma rises, eruption, lava flows, cooling). *Inside* opens the
 cutaway. Tap a label or a number to open a component's card, and *Listen* to
 have it read aloud. The camera button saves a picture to the gallery.
 
+## The interface
+
+Graphite and bone, one typeface, and as few words as the app can get away
+with. Colour is kept for the volcano and for heat.
+
+- **Home** has one filled button, *Place on a surface*. A green dot on it
+  means this phone can track surfaces.
+- **The console** at the bottom holds the eruption: a seismograph trace that
+  gets rougher where the ground shakes, the trigger, and two icon toggles
+  for the cutaway and the pins.
+- **Pins** are small numbered discs on the model. Tap one to open its sheet;
+  only the selected component is named.
+- **The sheet** gives a two-sentence summary and a short table of facts.
+  *Listen* reads the fuller explanation.
+
 ## How it is built
 
 ```mermaid
@@ -182,7 +197,7 @@ the screens themselves. `test/engine/render_dump_test.dart` and
 
 ## Credits
 
-- Typeface: [Sora](https://github.com/sora-xor/sora-font), SIL Open Font
+- Typeface: [Archivo](https://github.com/Omnibus-Type/Archivo), SIL Open Font
   License (`assets/fonts/OFL.txt`).
 - Tracking: Google ARCore and ML Kit barcode scanning (via
   [mobile_scanner](https://pub.dev/packages/mobile_scanner)).

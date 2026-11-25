@@ -59,7 +59,9 @@ class SceneRenderer {
   Rect? bounds;
 
   static const double _near = 0.02;
-  static const Color ember = Color(0xFFFF6A3D);
+
+  /// Pins and their names are bone, like the rest of the interface.
+  static const Color pinColor = Color(0xFFECE8E1);
 
   /// The part whose label is under [position], if any.
   VolcanoPart? partAt(Offset position) {
@@ -548,7 +550,7 @@ class SceneRenderer {
     EdgeInsets insets,
   ) {
     final g = geometry;
-    style ??= const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600);
+    style ??= const TextStyle(fontSize: 13, fontWeight: FontWeight.w600);
     if (style != _labelStyle) {
       _labelStyle = style;
       for (final painter in _textPainters.values) {
@@ -560,7 +562,6 @@ class SceneRenderer {
     final centre = _project(m, hw, hh, 0, 0.2, 0);
     if (centre == null) return;
     final selected = state.selected;
-    final placed = <Rect>[];
 
     for (final part in VolcanoPart.values) {
       final anchor = g.anchors[part.index];
@@ -576,131 +577,96 @@ class SceneRenderer {
       var alpha = visible * state.labelsT * opacity;
       if (alpha < 0.03) continue;
       final isSelected = selected == part;
-      // Unselected labels step back while a part is selected.
-      final dimmed = selected != null && !isSelected;
-      if (dimmed) alpha *= _dimmedLabel;
+      // Other pins step back while one is selected.
+      if (selected != null && !isSelected) alpha *= 0.4;
+      int a(double v) => (v * alpha * 255).round().clamp(0, 255);
 
-      final variant = isSelected ? 2 : (dimmed ? 1 : 0);
-      final number = _text(part, true, variant, style);
-      final name = _text(part, false, variant, style);
-      final side = s.$1 >= centre.$1 ? 1.0 : -1.0;
-      final dot = Offset(s.$1, s.$2);
-      const height = 30.0;
-      final width = 12 + number.width + 7 + name.width + 13;
-      // Labels sit on the outer side of the model, pulled in at the edges.
-      final minLeft = insets.left + 8;
-      final maxLeft = math.max(minLeft, size.width - insets.right - 8 - width);
-      final left = (side > 0 ? dot.dx + 26 : dot.dx - 26 - width).clamp(
+      // The pin: a small numbered disc on the part itself.
+      final pin = Offset(s.$1, s.$2);
+      const radius = 10.0;
+      _labelRects[part] = Rect.fromCircle(center: pin, radius: radius + 10);
+      canvas.drawCircle(
+        pin,
+        radius,
+        Paint()
+          ..color = isSelected
+              ? pinColor.withAlpha(a(1))
+              : Color.fromARGB(a(0.62), 14, 18, 22),
+      );
+      canvas.drawCircle(
+        pin,
+        radius,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.3
+          ..color = pinColor.withAlpha(a(1)),
+      );
+      final number = _text(part, true, isSelected, style);
+      if (alpha > 0.9 || isSelected) {
+        number.paint(canvas, pin - number.size.center(Offset.zero));
+      } else {
+        canvas.saveLayer(
+          Rect.fromCircle(center: pin, radius: radius),
+          Paint()..color = Color.fromRGBO(0, 0, 0, alpha),
+        );
+        number.paint(canvas, pin - number.size.center(Offset.zero));
+        canvas.restore();
+      }
+
+      // Only the selected part is named, beside its pin and with no box.
+      if (!isSelected) continue;
+      final name = _text(part, false, false, style);
+      final right = s.$1 >= centre.$1;
+      final minLeft = insets.left + 10;
+      final maxLeft = math.max(
+        minLeft,
+        size.width - insets.right - 10 - name.width,
+      );
+      final left = (right ? pin.dx + 34 : pin.dx - 34 - name.width).clamp(
         minLeft,
         maxLeft,
       );
-      final attachRight = side < 0;
-      var pill = Rect.fromLTWH(left, dot.dy - 22 - height / 2, width, height);
-      // Nudge down past labels that are already placed.
-      for (var tries = 0; tries < 4; tries++) {
-        final hit = placed.where((r) => r.inflate(4).overlaps(pill));
-        if (hit.isEmpty) break;
-        pill = pill.shift(Offset(0, hit.first.bottom + 6 - pill.top));
-      }
-      placed.add(pill);
-      _labelRects[part] = pill.expandToInclude(
-        Rect.fromCircle(center: dot, radius: 14),
-      );
-
-      // Painters carry their own colour, so a label only needs a layer while
-      // it is fading.
-      final settled = dimmed ? _dimmedLabel : 1.0;
-      final fading = (alpha - settled).abs() > 0.02;
-      final base = fading ? settled : alpha;
-      if (fading) {
-        canvas.saveLayer(
-          _labelRects[part]!.inflate(4),
-          Paint()..color = Color.fromRGBO(0, 0, 0, alpha / settled),
-        );
-      }
-      int a(double v) => (v * base * 255).round().clamp(0, 255);
-
-      final attach = Offset(
-        attachRight ? pill.right : pill.left,
-        pill.center.dy,
-      );
+      final at = Offset(left, pin.dy - name.height / 2);
       canvas.drawLine(
-        dot,
-        attach,
+        pin + Offset(right ? radius : -radius, 0),
+        Offset(right ? left - 6 : left + name.width + 6, pin.dy),
         Paint()
-          ..color = Color.fromARGB(a(0.7), 255, 255, 255)
+          ..color = pinColor.withAlpha(a(0.9))
           ..strokeWidth = 1.1,
       );
-      canvas.drawCircle(
-        dot,
-        5.5,
-        Paint()..color = Color.fromARGB(a(0.28), 255, 255, 255),
+      name.paint(canvas, at);
+      _labelRects[part] = _labelRects[part]!.expandToInclude(
+        (at & name.size).inflate(6),
       );
-      canvas.drawCircle(
-        dot,
-        2.6,
-        Paint()
-          ..color = isSelected
-              ? ember.withAlpha(a(1))
-              : Color.fromARGB(a(1), 255, 255, 255),
-      );
-
-      final shape = RRect.fromRectAndRadius(
-        pill,
-        const Radius.circular(height),
-      );
-      canvas.drawRRect(
-        shape,
-        Paint()
-          ..color = isSelected
-              ? ember.withAlpha(a(1))
-              : Color.fromARGB(a(0.84), 16, 17, 20),
-      );
-      if (!isSelected) {
-        canvas.drawRRect(
-          shape.deflate(0.5),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1
-            ..color = Color.fromARGB(a(0.16), 255, 255, 255),
-        );
-      }
-      final baseline = pill.top + (height - number.height) / 2;
-      number.paint(canvas, Offset(pill.left + 12, baseline));
-      name.paint(canvas, Offset(pill.left + 12 + number.width + 7, baseline));
-      if (fading) canvas.restore();
     }
   }
 
-  static const double _dimmedLabel = 0.45;
-
-  /// Cached text for a label. [variant] is 0 normal, 1 dimmed, 2 selected.
+  /// Cached text for a pin: its number, or its name.
   TextPainter _text(
     VolcanoPart part,
     bool number,
-    int variant,
+    bool onPin,
     TextStyle style,
   ) {
-    return _textPainters[(part, number, variant)] ??= () {
-      final Color color = switch (variant) {
-        2 => const Color(0xFF1A0E08),
-        1 => (number ? ember : const Color(0xFFFFFFFF)).withValues(
-          alpha: _dimmedLabel,
-        ),
-        _ => number ? ember : const Color(0xFFFFFFFF),
-      };
-      return TextPainter(
-        text: TextSpan(
-          text: number ? part.number : part.label,
-          style: style.copyWith(
-            color: color,
-            fontFeatures: number
-                ? const [ui.FontFeature.tabularFigures()]
-                : null,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-    }();
+    return _textPainters[(part, number, onPin ? 1 : 0)] ??= TextPainter(
+      text: TextSpan(
+        text: number ? '${part.index + 1}' : part.label,
+        style: number
+            ? style.copyWith(
+                fontSize: 11,
+                height: 1,
+                color: onPin ? const Color(0xFF0E1216) : pinColor,
+                fontFeatures: const [ui.FontFeature.tabularFigures()],
+              )
+            : style.copyWith(
+                color: pinColor,
+                shadows: const [
+                  Shadow(color: Color(0xCC000000), blurRadius: 10),
+                  Shadow(color: Color(0x80000000), blurRadius: 2),
+                ],
+              ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
   }
 }

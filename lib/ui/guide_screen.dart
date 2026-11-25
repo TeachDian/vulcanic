@@ -20,87 +20,57 @@ class GuideSection {
 }
 
 const List<GuideSection> guideSections = [
-  GuideSection('SURFACE · MARKERLESS', 'Stand it on a table', [
+  GuideSection('Surface', 'On a surface', [
     GuideStep(
       Icons.screen_rotation_alt_rounded,
-      'Scan the surface',
-      'Point at a table or floor and move the phone slowly. A lit, '
-          'patterned surface is found fastest.',
-    ),
-    GuideStep(
-      Icons.grid_on_rounded,
-      'Wait for the grid',
-      'Detected surfaces are outlined, and a ring shows where the volcano '
-          'would stand.',
+      'Scan',
+      'Point at a table or floor and move the phone slowly.',
     ),
     GuideStep(
       Icons.touch_app_rounded,
       'Tap to place',
-      'The volcano is anchored there. Walk around it; Move lets you place '
-          'it again.',
+      'A ring shows where it will stand. Walk around it once it is down.',
     ),
     GuideStep(
       Icons.phonelink_erase_rounded,
-      'No AR on your phone?',
-      'The app switches to screen placement: tap anywhere to put the '
-          'volcano there.',
+      'No AR on this phone',
+      'Tap anywhere on the camera view to put the volcano there.',
     ),
   ]),
-  GuideSection('MARKER · MARKER-BASED', 'Stand it on the marker', [
+  GuideSection('Marker', 'On a marker', [
     GuideStep(
-      Icons.print_rounded,
+      Icons.qr_code_2_rounded,
       'Get a marker',
-      'Print one from the project, or open Markers in this app on a second '
-          'screen.',
+      'Print one, or open Markers on a second screen.',
     ),
     GuideStep(
       Icons.center_focus_weak_rounded,
       'Point the camera at it',
-      'Keep the whole code in view. An outline shows that it is recognised.',
-    ),
-    GuideStep(
-      Icons.open_with_rounded,
-      'Move the marker',
-      'The volcano follows it. Cover the marker or take it away and the '
-          'volcano fades until it is back.',
-    ),
-    GuideStep(
-      Icons.filter_2_rounded,
-      'Try the second marker',
-      'Each marker shows its own content: marker 02 opens the cutaway.',
+      'The volcano stands on the marker and follows it. Marker 02 opens '
+          'the cutaway.',
     ),
   ]),
-  GuideSection('ONCE IT IS PLACED', 'Handle the volcano', [
+  GuideSection('Controls', 'The volcano', [
     GuideStep(
       Icons.swipe_rounded,
-      'Drag to turn it',
-      'Slide one finger sideways to look at it from any side.',
+      'Drag and pinch',
+      'Drag to turn it, pinch to resize. The buttons at the side do the '
+          'same.',
     ),
     GuideStep(
-      Icons.pinch_rounded,
-      'Pinch to resize',
-      'Two fingers make it larger or smaller.',
-    ),
-    GuideStep(
-      Icons.rotate_90_degrees_cw_outlined,
-      'Or use the view buttons',
-      'Plus and minus zoom; the turn button shows the next side. The view '
-          'also turns by itself to whatever you open or select.',
-    ),
-    GuideStep(
-      Icons.play_circle_outline_rounded,
-      'Set it off',
-      'Erupt plays the sequence. Tap again to pause it.',
+      Icons.play_arrow_rounded,
+      'Erupt',
+      'Plays the sequence. Tap again to pause.',
     ),
     GuideStep(
       Icons.pie_chart_outline_rounded,
       'Look inside',
-      'Inside opens a cutaway down to the magma chamber.',
+      'Opens a cutaway down to the magma chamber.',
     ),
     GuideStep(
-      Icons.sell_outlined,
-      'Tap a label',
-      'Each of the five components has a short explanation.',
+      Icons.radio_button_checked_rounded,
+      'Tap a pin',
+      'Each of the five components has a short explanation you can hear.',
     ),
   ]),
 ];
@@ -120,7 +90,7 @@ class GuideScreen extends StatelessWidget {
               sliver: SliverToBoxAdapter(
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: GlassIconButton(
+                  child: BarButton(
                     icon: Icons.arrow_back_rounded,
                     tooltip: 'Back',
                     onPressed: () => Navigator.of(context).maybePop(),
@@ -131,12 +101,12 @@ class GuideScreen extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 8),
               sliver: SliverToBoxAdapter(
-                child: Text('How it\nworks', style: AppText.display),
+                child: Text('How it works', style: AppText.display),
               ),
             ),
             for (final section in guideSections)
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+                padding: const EdgeInsets.fromLTRB(24, 30, 24, 0),
                 sliver: SliverToBoxAdapter(child: _SectionCard(section)),
               ),
             const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
@@ -153,80 +123,39 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 10),
-      decoration: BoxDecoration(
-        color: Palette.basalt,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Palette.line(0.07)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(section.overline, style: AppText.overline),
-          const SizedBox(height: 6),
-          Text(section.title, style: AppText.headline),
-          const SizedBox(height: 12),
-          for (final (i, step) in section.steps.indexed)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 16,
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(section.title, style: AppText.headline),
+        const SizedBox(height: 6),
+        for (final step in section.steps)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: Palette.line())),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 16,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(step.icon, color: Palette.bone, size: 22),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 3,
                     children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: Palette.slate,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Icon(step.icon, color: Palette.bone, size: 24),
-                      ),
-                      Positioned(
-                        right: -5,
-                        top: -5,
-                        child: Container(
-                          width: 20,
-                          height: 20,
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                            color: Palette.ember,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            '${i + 1}',
-                            style: AppText.label.copyWith(
-                              fontSize: 10.5,
-                              color: const Color(0xFF1A0E08),
-                            ),
-                          ),
-                        ),
-                      ),
+                      Text(step.title, style: AppText.title),
+                      Text(step.detail, style: AppText.body),
                     ],
                   ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 3,
-                      children: [
-                        const SizedBox(height: 4),
-                        Text(step.title, style: AppText.title),
-                        Text(
-                          step.detail,
-                          style: AppText.body.copyWith(fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

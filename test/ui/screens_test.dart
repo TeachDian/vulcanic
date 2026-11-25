@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vulcanic/engine/volcano_controller.dart';
 import 'package:vulcanic/engine/volcano_geometry.dart';
+import 'package:vulcanic/engine/volcano_view.dart';
 import 'package:vulcanic/ui/explorer_screen.dart';
 import 'package:vulcanic/ui/guide_screen.dart';
 import 'package:vulcanic/content/markers.dart';
@@ -27,7 +29,9 @@ VolcanoGeometry loadGeometry() => VolcanoGeometry.fromSources({
 Future<void> loadFonts() async {
   Future<ByteData> bytes(String path) async =>
       ByteData.sublistView(File(path).readAsBytesSync());
-  await (FontLoader('Sora')..addFont(bytes('assets/fonts/Sora.ttf'))).load();
+  await (FontLoader(
+    'Archivo',
+  )..addFont(bytes('assets/fonts/Archivo.ttf'))).load();
   final flutter = Platform.environment['FLUTTER_ROOT'];
   final icons = File(
     '$flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
@@ -58,6 +62,10 @@ Future<void> pumpScreen(
   );
 }
 
+/// The controller of the scene on screen.
+VolcanoController controllerOf(WidgetTester tester) =>
+    tester.widget<VolcanoView>(find.byType(VolcanoView)).controller;
+
 Future<void> advance(WidgetTester tester, double seconds) async {
   for (var i = 0; i < seconds * 30; i++) {
     await tester.pump(const Duration(milliseconds: 33));
@@ -83,9 +91,9 @@ void main() {
     await pumpScreen(tester, HomeScreen(geometry: geometry));
     await advance(tester, 2);
     await save(tester, 'screen_home');
-    expect(find.text('Explore in 3D'), findsOneWidget);
-    expect(find.text('Surface'), findsOneWidget);
-    expect(find.text('Marker'), findsOneWidget);
+    expect(find.text('Place on a surface'), findsOneWidget);
+    expect(find.text('On a marker'), findsOneWidget);
+    expect(find.text('Just the model'), findsOneWidget);
 
     await tester.tap(find.byTooltip('How it works'));
     await advance(tester, 1);
@@ -119,24 +127,25 @@ void main() {
     await tester.tap(find.byTooltip('Turn to the next side'));
     await advance(tester, 1.5);
     await save(tester, 'screen_explorer_turned');
-    await tester.tap(find.bySemanticsLabel('Recentre'));
+    await tester.tap(find.byTooltip('Recentre'));
     await advance(tester, 1.5);
 
-    // The rail opens the detail card for a component.
-    await tester.tap(find.text('03'));
+    // Selecting a component (a tap on its pin) opens its sheet.
+    controllerOf(tester).select(VolcanoPart.chamber);
     await advance(tester, 1);
-    expect(find.text('Magma chamber'), findsWidgets);
-    expect(find.text('COMPONENT 03 OF 05'), findsOneWidget);
+    expect(find.text('Magma chamber'), findsOneWidget);
+    expect(find.text('03 / 05'), findsOneWidget);
+    expect(find.text('Listen'), findsOneWidget);
     await save(tester, 'screen_explorer_part');
 
     await tester.tap(find.byTooltip('Next component'));
     await advance(tester, 1);
-    expect(find.text('COMPONENT 04 OF 05'), findsOneWidget);
+    expect(find.text('04 / 05'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Close'));
     await advance(tester, 1);
-    expect(find.text('COMPONENT 04 OF 05'), findsNothing);
-    expect(find.text('Reset'), findsOneWidget);
+    expect(find.text('04 / 05'), findsNothing);
+    expect(find.byTooltip('Reset'), findsOneWidget);
   });
 
   testWidgets('the detail card fits a short screen', (tester) async {
@@ -147,22 +156,22 @@ void main() {
       size: const Size(720, 1184),
     );
     await advance(tester, 1);
-    await tester.tap(find.text('01'));
+    controllerOf(tester).select(VolcanoPart.cone);
     await advance(tester, 1);
-    expect(find.text('COMPONENT 01 OF 05'), findsOneWidget);
+    expect(find.text('01 / 05'), findsOneWidget);
     await save(tester, 'screen_explorer_short');
   });
 
   testWidgets('the marker gallery shows both markers', (tester) async {
     await pumpScreen(tester, const MarkerCardScreen());
     await advance(tester, 1);
-    expect(find.text('MARKER 01 OF 02'), findsOneWidget);
+    expect(find.text('01 / 02'), findsOneWidget);
     expect(find.text('Volcano'), findsOneWidget);
     await save(tester, 'screen_markers');
 
     await tester.drag(find.byType(PageView), const Offset(-320, 0));
     await advance(tester, 1);
-    expect(find.text('MARKER 02 OF 02'), findsOneWidget);
+    expect(find.text('02 / 02'), findsOneWidget);
   });
 
   // Writes the printable markers when asked to:

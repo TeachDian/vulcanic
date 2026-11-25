@@ -50,12 +50,12 @@ class TrackingPainter extends CustomPainter {
     }
 
     if (showSurfaces) {
-      final fill = Paint()..color = Palette.glow.withValues(alpha: 0.10);
+      final fill = Paint()..color = Palette.bone.withValues(alpha: 0.07);
       final edge = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4
         ..strokeJoin = StrokeJoin.round
-        ..color = Palette.glow.withValues(alpha: 0.55);
+        ..color = Palette.bone.withValues(alpha: 0.5);
       for (final plane in f.planes) {
         final path = _outline(plane, project);
         if (path == null) continue;
@@ -140,14 +140,14 @@ class TrackingPainter extends CustomPainter {
 
     canvas.drawPath(
       circle(0.15),
-      Paint()..color = Palette.ember.withValues(alpha: 0.18),
+      Paint()..color = Palette.bone.withValues(alpha: 0.14),
     );
     canvas.drawPath(
       circle(0.15),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.6
-        ..color = Palette.ember,
+        ..color = Palette.bone,
     );
     canvas.drawPath(circle(0.018), Paint()..color = Colors.white);
   }

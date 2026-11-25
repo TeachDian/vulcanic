@@ -6,20 +6,25 @@ import '../../engine/volcano_controller.dart';
 import '../../engine/volcano_geometry.dart';
 import '../theme.dart';
 
-/// The detail card for the selected component.
+/// The sheet for the selected component: its name, what it does, and a
+/// few facts as a small table.
 class PartSheet extends StatelessWidget {
   const PartSheet({
     super.key,
     required this.part,
     required this.controller,
     this.leading,
+    this.bottomInset = 0,
   });
 
   final VolcanoPart part;
   final VolcanoController controller;
 
-  /// Optional action shown at the start of the footer (the narrator).
+  /// Optional action at the start of the footer (the narrator).
   final Widget? leading;
+
+  /// System inset under the sheet, which runs to the screen's edge.
+  final double bottomInset;
 
   void _step(int by) {
     HapticFeedback.selectionClick();
@@ -30,80 +35,63 @@ class PartSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final info = part.info;
+    final total = VolcanoPart.values.length.toString().padLeft(2, '0');
     return GestureDetector(
-      // Flick the card down to dismiss it.
+      // Flick the sheet down to dismiss it.
       onVerticalDragEnd: (details) {
         if ((details.primaryVelocity ?? 0) > 250) controller.select(null);
       },
-      child: Glass(
-        radius: 32,
-        tint: 0.78,
-        padding: const EdgeInsets.fromLTRB(20, 18, 14, 14),
+      child: Panel(
+        opacity: 1,
+        radius: const BorderRadius.vertical(top: Radius.circular(26)),
+        padding: EdgeInsets.fromLTRB(22, 10, 12, bottomInset + 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Palette.raise,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Palette.ember.withValues(alpha: 0.16),
-                  ),
-                  child: Icon(info.icon, color: Palette.ember, size: 23),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 5,
-                    children: [
-                      Text(
-                        'COMPONENT ${part.number} OF '
-                        '${VolcanoPart.values.length.toString().padLeft(2, '0')}',
-                        style: AppText.overline,
-                      ),
-                      Text(part.label, style: AppText.headline),
-                    ],
+                Text(
+                  '${part.number} / $total',
+                  style: AppText.caption.copyWith(
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
+                const Spacer(),
                 IconButton(
                   onPressed: () => controller.select(null),
                   tooltip: 'Close',
-                  icon: const Icon(Icons.close_rounded, size: 22),
+                  icon: const Icon(Icons.close_rounded, size: 21),
                   color: Palette.ash,
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            Text(part.label, style: AppText.headline),
+            const SizedBox(height: 10),
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.only(right: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 8,
-                  children: [
-                    Text(info.tagline, style: AppText.bodyStrong),
-                    Text(info.description, style: AppText.body),
-                  ],
-                ),
+                padding: const EdgeInsets.only(right: 10),
+                child: Text(info.summary, style: AppText.body),
               ),
             ),
             const SizedBox(height: 14),
-            SizedBox(
-              height: 54,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                clipBehavior: Clip.none,
-                itemCount: info.facts.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, i) => _FactChip(info.facts[i]),
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Column(
+                children: [for (final fact in info.facts) _FactRow(fact)],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
             Row(
               children: [
                 ?leading,
@@ -111,13 +99,13 @@ class PartSheet extends StatelessWidget {
                 IconButton(
                   onPressed: () => _step(VolcanoPart.values.length - 1),
                   tooltip: 'Previous component',
-                  icon: const Icon(Icons.arrow_back_rounded, size: 22),
+                  icon: const Icon(Icons.arrow_back_rounded, size: 21),
                   color: Palette.bone,
                 ),
                 IconButton(
                   onPressed: () => _step(1),
                   tooltip: 'Next component',
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 22),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 21),
                   color: Palette.bone,
                 ),
               ],
@@ -129,31 +117,32 @@ class PartSheet extends StatelessWidget {
   }
 }
 
-class _FactChip extends StatelessWidget {
-  const _FactChip(this.fact);
+/// One fact: what it is on the left, the value on the right.
+class _FactRow extends StatelessWidget {
+  const _FactRow(this.fact);
   final Fact fact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
+      padding: const EdgeInsets.symmetric(vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(18),
+        border: Border(top: BorderSide(color: Palette.line())),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 10,
+        spacing: 16,
         children: [
-          Icon(fact.icon, size: 18, color: Palette.glow),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 2,
-            children: [
-              Text(fact.label, style: AppText.caption.copyWith(fontSize: 10.5)),
-              Text(fact.value, style: AppText.label),
-            ],
+          Text(fact.label, style: AppText.caption.copyWith(fontSize: 13)),
+          Expanded(
+            child: Text(
+              fact.value,
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.label.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
           ),
         ],
       ),
