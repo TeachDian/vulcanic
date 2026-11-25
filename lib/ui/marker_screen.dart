@@ -150,7 +150,7 @@ class _MarkerSceneState extends State<_MarkerScene> {
       model: placeVolcano(
         anchor: anchor,
         width: _width,
-        blockDepth: widget.geometry.blockDepth,
+        lift: widget.geometry.restDepth(_controller.cutawayT),
         rotation: _controller.rotation,
         scale: _controller.scale,
       ),

@@ -97,10 +97,15 @@ class _ExplorerScreenState extends State<ExplorerScreen> {
       ..elevation +=
           (_elevationGoal - _camera.elevation) * (1 - math.exp(-dt * 6.5))
       // Sit the model above the dock, and higher still above the detail card.
-      ..target.y = lerpDouble(-0.30, -0.95, _controller.selectionT)!
+      ..target.y =
+          // The rock block appears below the plinth when the cutaway opens,
+          // and the sheet covers the lower part of the screen when a
+          // component is selected: keep the model framed through both.
+          lerpDouble(0.16, -0.14, _controller.cutawayT)! -
+          0.62 * _controller.selectionT
       // Zoom moves the camera, which keeps the model's proportions honest.
       ..distance =
-          _camera.distanceToFit(size, radius: 1.16) / _controller.scale;
+          _camera.distanceToFit(size, radius: 1.08) / _controller.scale;
     return _camera.frame(size, model: Matrix4.rotationY(_controller.rotation));
   }
 

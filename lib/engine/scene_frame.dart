@@ -50,12 +50,12 @@ class SceneFrame {
 /// Builds the model matrix that stands the volcano on an anchor.
 ///
 /// [anchor] is a pose whose +Y axis is the surface normal. The model's rock
-/// block extends [blockDepth] below its own ground level, so it is lifted to
+/// base reaches [lift] below its own ground level, so it is raised that far to
 /// rest on the surface. [width] is the diameter of the base in world units.
 Matrix4 placeVolcano({
   required Matrix4 anchor,
   required double width,
-  required double blockDepth,
+  required double lift,
   double rotation = 0,
   double scale = 1,
 }) {
@@ -63,7 +63,7 @@ Matrix4 placeVolcano({
   return anchor.clone()
     ..rotateY(rotation)
     ..scaleByDouble(s, s, s, 1)
-    ..translateByDouble(0, blockDepth, 0, 1);
+    ..translateByDouble(0, lift, 0, 1);
 }
 
 /// An orbiting camera for the 3D explorer and for previews.

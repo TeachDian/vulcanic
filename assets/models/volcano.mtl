@@ -7,6 +7,8 @@ newmtl cone_section
 Kd 0.42 0.35 0.30
 newmtl terrain_rock
 Kd 0.40 0.34 0.28
+newmtl terrain_deep
+Kd 0.36 0.31 0.27
 newmtl terrain_section
 Kd 0.46 0.39 0.32
 newmtl magma

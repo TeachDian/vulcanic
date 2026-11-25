@@ -37,6 +37,9 @@ void main() {
 
     test('measures the model from its meshes', () {
       expect(g.blockDepth, closeTo(forge.kBlockDepth, 1e-3));
+      expect(g.plinthDepth, closeTo(forge.kPlinthDepth, 1e-3));
+      expect(g.restDepth(0), g.plinthDepth);
+      expect(g.restDepth(1), g.blockDepth);
       expect(g.baseRadius, closeTo(forge.kBaseRadius, 1e-3));
       expect(g.vent.y, inInclusiveRange(0.6, 0.8));
     });
@@ -79,6 +82,19 @@ void main() {
       }
       expect(sections, greaterThan(100));
       expect(interior, greaterThan(100));
+    });
+
+    test('the rock under the plinth is kept for the cutaway', () {
+      var deep = 0, plinth = 0;
+      for (var t = 0; t < g.triangleCount; t++) {
+        if (g.roles[t] == FaceRole.deep.index) deep++;
+        if (g.parts[t] == VolcanoPart.terrain.index &&
+            g.roles[t] == FaceRole.rock.index) {
+          plinth++;
+        }
+      }
+      expect(deep, greaterThan(200));
+      expect(plinth, greaterThan(100));
     });
 
     test('lava and conduit carry a 0..1 animation parameter', () {

@@ -48,8 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // A slow turntable.
     _camera
       ..azimuth = 1.25 + _hero.clock * 0.10
-      ..target.y = 0.02
-      ..distance = _camera.distanceToFit(size, radius: 1.12);
+      ..target.y = 0.26
+      ..distance = _camera.distanceToFit(size, radius: 1.14);
     return _camera.frame(size);
   }
 
