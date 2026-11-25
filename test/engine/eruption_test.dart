@@ -95,7 +95,7 @@ void main() {
 
     test('the crater pulses faster and faster before it opens', () {
       final e = Eruption()..start();
-      var peaks = <double>[];
+      final peaks = <double>[];
       var previous = 0.0, rising = false;
       for (var t = 0.5; t < Eruption.onset; t += 0.01) {
         e.time = t;
