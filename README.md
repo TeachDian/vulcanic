@@ -173,6 +173,11 @@ ARCore does the tracking and Flutter draws everything.
   homography from the flat square to its image, then factors that into a
   rotation and a translation. Distances are in units of the code's width,
   so the marker can be printed at any size.
+- `MarkerStabilizer` takes the shake out. Four corner points pin down where
+  a marker is far better than how it is tilted, so a model stood on the raw
+  pose trembles. When the marker is roughly level, the model's vertical is
+  taken from the phone's gravity sensor instead of from the image, and
+  position and facing are smoothed heavily at rest and lightly in motion.
 - `MarkerTracker` eases between detections and reports the marker lost when
   they stop.
 

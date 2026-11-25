@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../ar/camera_start.dart';
+import '../ar/gravity.dart';
 import '../ar/marker_pose.dart';
 import '../content/markers.dart';
 import '../engine/scene_frame.dart';
@@ -45,6 +46,9 @@ class _MarkerSceneState extends State<_MarkerScene> {
   late final SceneRenderer _renderer = SceneRenderer(widget.geometry);
   final VolcanoController _controller = VolcanoController();
   final MarkerTracker _tracker = MarkerTracker();
+  final MarkerStabilizer _stabilizer = MarkerStabilizer();
+  final GravitySensor _gravity = GravitySensor();
+  double _lastFrameClock = 0;
   final MobileScannerController _scanner = MobileScannerController(
     autoStart: false,
     formats: const [BarcodeFormat.qrCode],
@@ -64,12 +68,14 @@ class _MarkerSceneState extends State<_MarkerScene> {
   void initState() {
     super.initState();
     _controller.frame.addListener(_onTick);
+    _gravity.start();
     startCamera(_scanner, stillWanted: () => mounted);
   }
 
   @override
   void dispose() {
     _controller.frame.removeListener(_onTick);
+    _gravity.stop();
     _scanner.dispose();
     _renderer.dispose();
     _controller.dispose();
@@ -131,6 +137,9 @@ class _MarkerSceneState extends State<_MarkerScene> {
     _opacity += (target - _opacity) * (1 - 1 / (1 + dt * 14));
     // The warning about an unknown code clears once the code is gone.
     final foreign = _foreignCode && _controller.clock - _foreignSeenAt < 1.5;
+    // A marker that comes back is taken where it is, not eased to from
+    // where it was last seen.
+    if (lock == _Lock.locked && _lock != _Lock.locked) _stabilizer.reset();
     if (lock != _lock || foreign != _foreignCode) {
       setState(() {
         _lock = lock;
@@ -143,8 +152,12 @@ class _MarkerSceneState extends State<_MarkerScene> {
     final corners = _tracker.corners;
     if (corners == null || _imageSize.isEmpty || _opacity < 0.01) return null;
     final focal = MarkerPose.focalLength(_imageSize, size);
-    final anchor = MarkerPose.estimate(corners, size, focal);
-    if (anchor == null) return null;
+    final raw = MarkerPose.estimate(corners, size, focal);
+    if (raw == null) return null;
+    // Level it and take the shake out before standing the model on it.
+    final dt = _controller.clock - _lastFrameClock;
+    _lastFrameClock = _controller.clock;
+    final anchor = _stabilizer.update(raw, up: _gravity.up, dt: dt);
     return SceneFrame(
       view: Matrix4.identity(),
       projection: MarkerPose.projection(size, focal),
