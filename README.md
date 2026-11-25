@@ -4,7 +4,7 @@ An interactive AR volcano for Android, built with Flutter.
 
 Stand a stratovolcano on your desk, set off an eruption, open a cutaway down
 to the magma chamber, and tap any of its five components to read or hear
-what it does. It works three ways:
+what it does, in a recorded voice if you add one. It works three ways:
 
 | Mode | Tracking | Needs |
 | ---- | -------- | ----- |
@@ -178,8 +178,17 @@ ARCore does the tracking and Flutter draws everything.
 
 ### Narration
 
-`lib/narration/` reads a component's description with Android's
-text-to-speech, choosing a female English voice from those installed.
+*Listen* on a component's sheet reads its explanation aloud
+(`lib/narration/`).
+
+- If the app ships a recording for that component
+  (`assets/narration/<component>.m4a`), that recording is played, straight
+  from the APK through Android's `MediaPlayer`.
+- Otherwise the phone's speech engine reads the same text in a male English
+  voice, chosen by name because Android does not label voices by gender.
+
+[`docs/narration.md`](docs/narration.md) has the script for all five
+components and how to add recordings. They can be added one at a time.
 
 ### Motion
 
