@@ -335,10 +335,11 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
         if (!_placed) _showSurfaces = false;
         _placed = true;
       });
-      // A fresh placement faces the viewer again.
+      // A fresh placement faces the viewer again, and rises into place.
       _controller
         ..holdStill()
-        ..rotation = 0;
+        ..rotation = 0
+        ..arrive();
     } else {
       setState(() => _notice = 'No surface found there yet. Try the grid');
     }
@@ -360,7 +361,7 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
         width: _width,
         lift: widget.geometry.restDepth(_controller.cutawayT),
         rotation: _yaw + _controller.rotation,
-        scale: _controller.scale,
+        scale: _controller.scale * _controller.arrivalScale,
       ),
       opacity: _opacity,
       exposure: light == null ? 1 : (0.62 + light * 0.9).clamp(0.65, 1.2),
@@ -477,6 +478,23 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
                   ),
                 ),
               ),
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: RipplePainter(
+                    repaint: _controller.frame,
+                    age: () => _controller.arrivalAge,
+                    pose: (size) {
+                      final frame = _session.frame.value;
+                      final anchor = _anchor;
+                      if (frame == null || anchor == null) return null;
+                      return (
+                        frame.projection * frame.view,
+                        anchor.scaledByDouble(_width / 2, 1, _width / 2, 1),
+                      );
+                    },
+                  ),
+                ),
+              ),
               SceneGestures(
                 renderer: _renderer,
                 controller: _controller,
@@ -544,6 +562,7 @@ class _ScreenSurfaceState extends State<_ScreenSurface> {
   void initState() {
     super.initState();
     startCamera(_preview, stillWanted: () => mounted);
+    _controller.arrive();
   }
 
   /// Where the volcano stands on the assumed surface; null until laid out.
@@ -562,6 +581,7 @@ class _ScreenSurfaceState extends State<_ScreenSurface> {
     HapticFeedback.selectionClick();
     final point = _camera.groundPoint(position, size);
     _anchor = Matrix4.translation(point);
+    _controller.arrive();
     if (!_moved) setState(() => _moved = true);
   }
 
@@ -578,7 +598,7 @@ class _ScreenSurfaceState extends State<_ScreenSurface> {
         width: _width,
         lift: widget.geometry.restDepth(_controller.cutawayT),
         rotation: facingYaw(anchor, view) + _controller.rotation,
-        scale: _controller.scale,
+        scale: _controller.scale * _controller.arrivalScale,
       ),
     );
   }
@@ -630,6 +650,22 @@ class _ScreenSurfaceState extends State<_ScreenSurface> {
                 errorBuilder: (context, error) => const _CameraError(),
                 placeholderBuilder: (context) =>
                     const ColoredBox(color: Colors.black),
+              ),
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: RipplePainter(
+                    repaint: _controller.frame,
+                    age: () => _controller.arrivalAge,
+                    pose: (size) {
+                      final anchor = _anchor;
+                      if (anchor == null) return null;
+                      return (
+                        _camera.projection(size) * _camera.view,
+                        anchor.scaledByDouble(_width / 2, 1, _width / 2, 1),
+                      );
+                    },
+                  ),
+                ),
               ),
               SceneGestures(
                 renderer: _renderer,

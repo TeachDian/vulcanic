@@ -177,15 +177,15 @@ class _SceneChromeState extends State<SceneChrome> {
                             ),
                           Flexible(
                             child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 260),
-                              switchInCurve: Curves.easeOutCubic,
+                              duration: const Duration(milliseconds: 340),
+                              switchInCurve: Curves.easeOutQuart,
                               switchOutCurve: Curves.easeInCubic,
                               transitionBuilder: (child, animation) =>
                                   FadeTransition(
                                     opacity: animation,
                                     child: SlideTransition(
                                       position: Tween(
-                                        begin: const Offset(0, 0.14),
+                                        begin: const Offset(0, 0.32),
                                         end: Offset.zero,
                                       ).animate(animation),
                                       child: child,

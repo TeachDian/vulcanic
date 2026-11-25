@@ -57,6 +57,27 @@ class VolcanoController extends ChangeNotifier {
 
   /// True while the view is easing toward a new orientation or size.
   bool get inMotion => _rotationGoal != null || _scaleGoal != null;
+  double _rotationSpeed = 0;
+  double _scaleSpeed = 0;
+
+  /// How far the model has risen into place after being put down: 0 when
+  /// it lands, settling at 1 with a small overshoot. Hosts scale and lift
+  /// the model by it.
+  double arrival = 1;
+  double _arrivalSpeed = 0;
+
+  /// Seconds since [arrive] was last called; drives the surface ripple.
+  double arrivalAge = 10;
+
+  /// Plays the arrival: call when the model is placed or first appears.
+  void arrive() {
+    arrival = 0;
+    _arrivalSpeed = 0;
+    arrivalAge = 0;
+  }
+
+  /// Size multiplier for the arrival animation.
+  double get arrivalScale => 0.55 + 0.45 * arrival;
 
   bool get cutaway => _cutaway;
   bool get labels => _labels;
@@ -126,6 +147,8 @@ class VolcanoController extends ChangeNotifier {
   void holdStill() {
     _rotationGoal = null;
     _scaleGoal = null;
+    _rotationSpeed = 0;
+    _scaleSpeed = 0;
     _beforeOpening = null;
   }
 
@@ -206,23 +229,47 @@ class VolcanoController extends ChangeNotifier {
 
     if (selectionT == 0) _highlighted = _selected;
 
-    // Ease toward wherever the app has pointed the view.
-    final ease = 1 - math.exp(-dt * 6.5);
+    // Spring toward wherever the app has pointed the view. A turn has a
+    // little overshoot, so the model feels like it has weight; a zoom is
+    // nearly critically damped, because bouncing size reads as a glitch.
     final rotationGoal = _rotationGoal;
     if (rotationGoal != null) {
-      rotation += (rotationGoal - rotation) * ease;
-      if ((rotationGoal - rotation).abs() < 0.0015) {
+      _rotationSpeed +=
+          (90 * (rotationGoal - rotation) - 11.8 * _rotationSpeed) * dt;
+      rotation += _rotationSpeed * dt;
+      if ((rotationGoal - rotation).abs() < 0.0015 &&
+          _rotationSpeed.abs() < 0.02) {
         rotation = rotationGoal;
         _rotationGoal = null;
+        _rotationSpeed = 0;
       }
     }
     final scaleGoal = _scaleGoal;
     if (scaleGoal != null) {
-      _scale += (scaleGoal - _scale) * ease;
-      if ((scaleGoal - _scale).abs() < 0.0015) {
+      _scaleSpeed += (100 * (scaleGoal - _scale) - 16.5 * _scaleSpeed) * dt;
+      _scale += _scaleSpeed * dt;
+      if (_scale < minScale || _scale > maxScale) {
+        _scale = _scale.clamp(minScale, maxScale);
+        _scaleSpeed = 0;
+      }
+      if ((scaleGoal - _scale).abs() < 0.0015 && _scaleSpeed.abs() < 0.02) {
         _scale = scaleGoal;
         _scaleGoal = null;
+        _scaleSpeed = 0;
       }
+    }
+
+    // The model's arrival on a surface: it rises into place.
+    if (arrival < 1 || _arrivalSpeed != 0) {
+      arrivalAge += dt;
+      _arrivalSpeed += (130 * (1 - arrival) - 12.5 * _arrivalSpeed) * dt;
+      arrival += _arrivalSpeed * dt;
+      if ((1 - arrival).abs() < 0.002 && _arrivalSpeed.abs() < 0.02) {
+        arrival = 1;
+        _arrivalSpeed = 0;
+      }
+    } else if (arrivalAge < 10) {
+      arrivalAge += dt;
     }
 
     final phase = eruption.phase;

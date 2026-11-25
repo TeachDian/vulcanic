@@ -8,7 +8,7 @@ import '../theme.dart';
 
 /// The sheet for the selected component: its name, what it does, and a
 /// few facts as a small table.
-class PartSheet extends StatelessWidget {
+class PartSheet extends StatefulWidget {
   const PartSheet({
     super.key,
     required this.part,
@@ -25,6 +25,57 @@ class PartSheet extends StatelessWidget {
 
   /// System inset under the sheet, which runs to the screen's edge.
   final double bottomInset;
+
+  @override
+  State<PartSheet> createState() => _PartSheetState();
+}
+
+class _PartSheetState extends State<PartSheet>
+    with SingleTickerProviderStateMixin {
+  /// Brings the sheet's lines in one after another, on arrival and
+  /// whenever the component changes.
+  late final AnimationController _entrance = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 520),
+  )..forward();
+
+  VolcanoPart get part => widget.part;
+  VolcanoController get controller => widget.controller;
+
+  @override
+  void didUpdateWidget(PartSheet old) {
+    super.didUpdateWidget(old);
+    if (old.part != widget.part) _entrance.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _entrance.dispose();
+    super.dispose();
+  }
+
+  /// Wraps [child] so that it fades and rises as the [order]-th line.
+  Widget _line(int order, Widget child) {
+    final start = 0.10 * order;
+    final curve = CurvedAnimation(
+      parent: _entrance,
+      curve: Interval(
+        start,
+        (start + 0.55).clamp(0.0, 1.0),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    return FadeTransition(
+      opacity: curve,
+      child: SlideTransition(
+        position: Tween(
+          begin: const Offset(0, 0.35),
+          end: Offset.zero,
+        ).animate(curve),
+        child: child,
+      ),
+    );
+  }
 
   void _step(int by) {
     HapticFeedback.selectionClick();
@@ -44,7 +95,7 @@ class PartSheet extends StatelessWidget {
       child: Panel(
         opacity: 1,
         radius: const BorderRadius.vertical(top: Radius.circular(26)),
-        padding: EdgeInsets.fromLTRB(22, 10, 12, bottomInset + 10),
+        padding: EdgeInsets.fromLTRB(22, 10, 12, widget.bottomInset + 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,25 +127,31 @@ class PartSheet extends StatelessWidget {
                 ),
               ],
             ),
-            Text(part.label, style: AppText.headline),
+            _line(0, Text(part.label, style: AppText.headline)),
             const SizedBox(height: 10),
             Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(right: 10),
-                child: Text(info.summary, style: AppText.body),
+              child: _line(
+                1,
+                SingleChildScrollView(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Text(info.summary, style: AppText.body),
+                ),
               ),
             ),
             const SizedBox(height: 14),
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: Column(
-                children: [for (final fact in info.facts) _FactRow(fact)],
+                children: [
+                  for (final (i, fact) in info.facts.indexed)
+                    _line(2 + i, _FactRow(fact)),
+                ],
               ),
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                ?leading,
+                ?widget.leading,
                 const Spacer(),
                 IconButton(
                   onPressed: () => _step(VolcanoPart.values.length - 1),

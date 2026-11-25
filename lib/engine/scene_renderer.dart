@@ -99,8 +99,8 @@ class SceneRenderer {
     final tremor = eruption.tremor;
     if (tremor > 0) {
       model.translateByDouble(
-        0.007 * tremor * math.sin(clock * 71),
-        0.004 * tremor * math.sin(clock * 93),
+        0.010 * tremor * math.sin(clock * 71),
+        0.006 * tremor * math.sin(clock * 93),
         0,
         1,
       );
@@ -342,7 +342,16 @@ class SceneRenderer {
 
     final unit = model.getMaxScaleOnAxis() * frame.projection.storage[5] * hh;
     _paintVentGlow(canvas, m, hw, hh, unit, glow * frame.opacity);
-    _paintParticles(canvas, state.particles, m, hw, hh, unit, frame.opacity);
+    _paintParticles(
+      canvas,
+      state.particles,
+      m,
+      hw,
+      hh,
+      unit,
+      frame.opacity,
+      glow,
+    );
     if (state.labelsT > 0.01) {
       _paintLabels(
         canvas,
@@ -380,6 +389,14 @@ class SceneRenderer {
   static double _heatR(double t) => _ramp(_heatRed, t);
   static double _heatG(double t) => _ramp(_heatGreen, t);
   static double _heatB(double t) => _ramp(_heatBlue, t);
+
+  /// The colour of rock at temperature [t] (0..1) with [alpha].
+  static Color _heatColor(double t, double alpha) => Color.fromRGBO(
+    (_heatR(t) * 255).round(),
+    (_heatG(t) * 255).round(),
+    (_heatB(t) * 255).round(),
+    alpha.clamp(0.0, 1.0),
+  );
 
   static int _channel(double v) =>
       v <= 0 ? 0 : (v >= 1 ? 255 : (v * 255).toInt());
@@ -506,6 +523,7 @@ class SceneRenderer {
     double hh,
     double unit,
     double opacity,
+    double glow,
   ) {
     final n = particles.capacity;
     final transforms = Float32List(n * 4);
@@ -533,18 +551,15 @@ class SceneRenderer {
           m,
           hw,
           hh,
-          x - particles.velocity[q] * 0.07,
-          y - particles.velocity[q + 1] * 0.07,
-          z - particles.velocity[q + 2] * 0.07,
+          x - particles.velocity[q] * 0.11,
+          y - particles.velocity[q + 1] * 0.11,
+          z - particles.velocity[q + 2] * 0.11,
         );
         if (tail == null) continue;
         emberPaint
           ..strokeWidth = math.max(1.2, particles.size[i] * unit / s.$3)
-          ..color = Color.lerp(
-            const Color(0xFFFFF1B0),
-            const Color(0xFFFF5A1F),
-            a,
-          )!.withValues(alpha: (1 - a * a) * opacity);
+          // A fragment cools in flight, along the same ramp as the lava.
+          ..color = _heatColor(1 - 0.75 * a, (1 - a * a) * opacity);
         canvas.drawLine(
           Offset(tail.$1, tail.$2),
           Offset(s.$1, s.$2),
@@ -554,7 +569,7 @@ class SceneRenderer {
       }
 
       final diameter =
-          particles.size[i] * (0.35 + 0.65 * math.sqrt(a)) * unit / s.$3;
+          particles.size[i] * (0.25 + 0.75 * math.sqrt(a)) * unit / s.$3;
       final scale = diameter / 64;
       transforms[sprites * 4] = scale;
       transforms[sprites * 4 + 1] = 0;
@@ -565,18 +580,31 @@ class SceneRenderer {
       Color color;
       double alpha;
       if (kind == Particles.ash) {
-        color = a < 0.12
-            ? Color.lerp(
-                const Color(0xFFFFB060),
-                const Color(0xFF5A4640),
-                a / 0.12,
-              )!
-            : Color.lerp(
-                const Color(0xFF4A403C),
-                const Color(0xFF8D8782),
-                (a - 0.12) / 0.88,
-              )!;
-        alpha = math.min(a / 0.08, 1) * (1 - smoothstep(0.55, 1, a)) * 0.66;
+        final seconds = particles.age[i];
+        // Ash leaves the vent incandescent and is dark within a quarter of
+        // a second. After that it greys as it ages, and the underside of
+        // the column is lit by the crater while it is still low.
+        final hot = 1 - seconds / 0.28;
+        if (hot > 0) {
+          color = _heatColor(0.35 + 0.6 * hot, 1);
+        } else {
+          final under =
+              (1 - (y - geometry.vent.y) / 0.5).clamp(0.0, 1.0) * 0.5 * glow;
+          final grey = a < 0.5
+              ? Color.lerp(
+                  const Color(0xFF3C3432),
+                  const Color(0xFF686260),
+                  a * 2,
+                )!
+              : Color.lerp(
+                  const Color(0xFF686260),
+                  const Color(0xFF96928E),
+                  a * 2 - 1,
+                )!;
+          color = Color.lerp(grey, const Color(0xFFFF823C), under)!;
+        }
+        alpha =
+            math.min(seconds / 0.06, 1) * (1 - smoothstep(0.5, 1, a)) * 0.62;
       } else {
         color = const Color(0xFFE9E5DF);
         alpha = math.min(a / 0.2, 1) * (1 - smoothstep(0.4, 1, a)) * 0.20;
