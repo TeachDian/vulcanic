@@ -53,7 +53,9 @@ class Narrator extends ChangeNotifier {
       await (_ready ??= _prepare());
       if (_speaking != part) return; // stopped while getting ready
       _spokeAt = DateTime.now();
-      await _tts.speak(scriptFor(part));
+      final accepted = await _tts.speak(scriptFor(part));
+      // The engine answers 1 when it has taken the text.
+      if (accepted != 1 && _speaking == part) _set(null);
     } catch (_) {
       // No speech engine, or it refused: fall silent.
       _ready = null;
