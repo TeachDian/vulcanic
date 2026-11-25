@@ -32,17 +32,23 @@ class _CameraGateState extends State<CameraGate> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Coming back from the settings page.
+    // Coming back from the settings page. A passive check cannot tell
+    // "denied" from "blocked", so it is only allowed to report good news.
     if (state == AppLifecycleState.resumed &&
         _access != null &&
         _access != CameraAccess.granted) {
-      _check(request: false);
+      _check(request: false, onlyIfGranted: true);
     }
   }
 
-  Future<void> _check({required bool request}) async {
+  Future<void> _check({
+    required bool request,
+    bool onlyIfGranted = false,
+  }) async {
     final access = await CameraPermission.check(request: request);
-    if (mounted) setState(() => _access = access);
+    if (!mounted) return;
+    if (onlyIfGranted && access != CameraAccess.granted) return;
+    setState(() => _access = access);
   }
 
   @override

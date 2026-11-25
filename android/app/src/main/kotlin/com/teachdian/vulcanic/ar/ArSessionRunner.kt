@@ -20,6 +20,7 @@ import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Owns the ARCore session and the thread it runs on.
@@ -42,7 +43,14 @@ internal class ArSessionRunner(
 
     @Volatile
     private var running = false
+
+    /** True once the AR thread has exited; nothing will be processed after. */
+    @Volatile
+    private var finished = false
     private var thread: Thread? = null
+
+    /** A tap waiting for the next camera frame. Set from any thread. */
+    private val pendingTap = AtomicReference<Tap?>(null)
 
     // Everything below is touched only on the AR thread.
     private var display: EGLDisplay = EGL14.EGL_NO_DISPLAY
@@ -56,7 +64,7 @@ internal class ArSessionRunner(
     private var paused = false
     private var width = 1
     private var height = 1
-    private var pendingTap: Tap? = null
+    private var rotation = Surface.ROTATION_0
 
     private val view = FloatArray(16)
     private val projection = FloatArray(16)
@@ -66,16 +74,23 @@ internal class ArSessionRunner(
 
     private class Tap(val x: Float, val y: Float, val reply: (Boolean) -> Unit)
 
-    fun start(surface: Surface, width: Int, height: Int, onStopped: () -> Unit) {
+    fun start(
+        surface: Surface,
+        width: Int,
+        height: Int,
+        rotation: Int,
+        onStopped: () -> Unit,
+    ) {
         running = true
         thread = Thread({
             try {
-                setUp(surface, width, height)
+                setUp(surface, width, height, rotation)
                 loop()
             } catch (e: Throwable) {
                 Log.e(TAG, "AR session failed", e)
                 onError(errorCode(e), e.message ?: e.javaClass.simpleName)
             } finally {
+                finished = true
                 tearDown()
                 onStopped()
             }
@@ -87,10 +102,13 @@ internal class ArSessionRunner(
         running = false
     }
 
-    /** Points rendering at a new surface, or at nothing when null. */
-    fun setWindow(surface: Surface?, width: Int, height: Int) = post {
+    /**
+     * Points rendering at a new surface, or at nothing when null.
+     * [rotation] is the display's `Surface.ROTATION_*`.
+     */
+    fun setWindow(surface: Surface?, width: Int, height: Int, rotation: Int) = post {
         releaseWindow()
-        if (surface != null && surface.isValid) attachWindow(surface, width, height)
+        if (surface != null && surface.isValid) attachWindow(surface, width, height, rotation)
     }
 
     fun pause() = post {
@@ -102,16 +120,22 @@ internal class ArSessionRunner(
 
     fun resume() = post {
         if (paused) {
-            session?.resume()
+            session?.let { resumeSession(it) }
             background?.invalidate()
             paused = false
         }
     }
 
     /** Anchors the model where the screen point meets a detected plane. */
-    fun hitTest(x: Float, y: Float, reply: (Boolean) -> Unit) = post {
-        pendingTap?.reply?.invoke(false)
-        pendingTap = Tap(x, y, reply)
+    fun hitTest(x: Float, y: Float, reply: (Boolean) -> Unit) {
+        if (finished) {
+            reply(false)
+            return
+        }
+        // A newer tap replaces one that has not been handled yet.
+        pendingTap.getAndSet(Tap(x, y, reply))?.reply?.invoke(false)
+        // The thread may have ended in between; make sure the tap is answered.
+        if (finished) pendingTap.getAndSet(null)?.reply?.invoke(false)
     }
 
     fun clearAnchor() = post {
@@ -125,7 +149,7 @@ internal class ArSessionRunner(
 
     // --- AR thread -------------------------------------------------------
 
-    private fun setUp(surface: Surface, width: Int, height: Int) {
+    private fun setUp(surface: Surface, width: Int, height: Int, rotation: Int) {
         display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
         val version = IntArray(2)
         check(EGL14.eglInitialize(display, version, 0, version, 1)) { "EGL init failed" }
@@ -175,11 +199,28 @@ internal class ArSessionRunner(
             },
         )
         session.setCameraTextureName(background.textureId)
-        attachWindow(surface, width, height)
-        session.resume()
+        attachWindow(surface, width, height, rotation)
+        resumeSession(session)
     }
 
-    private fun attachWindow(surface: Surface, width: Int, height: Int) {
+    /**
+     * Opens the camera. Another camera user in this app (the marker scanner
+     * or the fallback preview) may still be closing, so allow it a moment.
+     */
+    private fun resumeSession(session: Session) {
+        var attempt = 0
+        while (true) {
+            try {
+                session.resume()
+                return
+            } catch (e: CameraNotAvailableException) {
+                if (++attempt >= 4 || !running) throw e
+                Thread.sleep(350)
+            }
+        }
+    }
+
+    private fun attachWindow(surface: Surface, width: Int, height: Int, rotation: Int) {
         window = EGL14.eglCreateWindowSurface(
             display,
             eglConfig,
@@ -187,14 +228,16 @@ internal class ArSessionRunner(
             intArrayOf(EGL14.EGL_NONE),
             0,
         )
-        if (window == EGL14.EGL_NO_SURFACE) {
-            Log.w(TAG, "Could not create window surface: ${EGL14.eglGetError()}")
-            return
+        // Without a surface there is nothing to show; fail loudly so that
+        // Flutter can fall back instead of sitting on a frozen image.
+        check(window != EGL14.EGL_NO_SURFACE) {
+            "Could not create the camera surface (EGL ${EGL14.eglGetError()})"
         }
         EGL14.eglMakeCurrent(display, window, window, eglContext)
         this.width = width
         this.height = height
-        session?.setDisplayGeometry(Surface.ROTATION_0, width, height)
+        this.rotation = rotation
+        session?.setDisplayGeometry(rotation, width, height)
         background?.invalidate()
     }
 
@@ -223,10 +266,8 @@ internal class ArSessionRunner(
             GLES20.glClearColor(0f, 0f, 0f, 1f)
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
             background.draw(frame)
-            if (!EGL14.eglSwapBuffers(display, window)) {
-                // The surface went away under us; wait for a new one.
-                releaseWindow()
-                continue
+            check(EGL14.eglSwapBuffers(display, window)) {
+                "Lost the camera surface (EGL ${EGL14.eglGetError()})"
             }
             placeAnchor(frame)
             onFrame(buildPacket(session, frame))
@@ -234,8 +275,8 @@ internal class ArSessionRunner(
     }
 
     private fun tearDown() {
-        pendingTap?.reply?.invoke(false)
-        pendingTap = null
+        pendingTap.getAndSet(null)?.reply?.invoke(false)
+        commands.clear()
         runCatching { anchor?.detach() }
         anchor = null
         runCatching { session?.close() }
@@ -268,18 +309,19 @@ internal class ArSessionRunner(
         }
 
     private fun placeAnchor(frame: Frame) {
-        val tap = pendingTap ?: return
-        pendingTap = null
+        val tap = pendingTap.getAndSet(null) ?: return
         val hit = if (frame.camera.trackingState == TrackingState.TRACKING) {
             planeHit(frame, tap.x, tap.y)
         } else {
             null
         }
-        if (hit != null) {
+        // Creating an anchor can fail (e.g. ARCore is out of anchor budget).
+        val created = hit?.let { runCatching { it.createAnchor() }.getOrNull() }
+        if (created != null) {
             anchor?.detach()
-            anchor = hit.createAnchor()
+            anchor = created
         }
-        tap.reply(hit != null)
+        tap.reply(created != null)
     }
 
     /**

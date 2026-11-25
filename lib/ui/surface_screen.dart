@@ -219,6 +219,17 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
   void _onFrame() {
     final frame = _session.frame.value;
     if (frame == null) return;
+    if (_placed && !_placing && frame.anchorState == AnchorState.none) {
+      // ARCore gave up on the anchor for good; ask for a new spot.
+      setState(() {
+        _placed = false;
+        _placing = true;
+        _anchor = null;
+        _showSurfaces = true;
+        _notice = 'The surface was lost. Tap to place again';
+      });
+      return;
+    }
     if (frame.anchor != null) {
       _anchor = frame.anchor;
       if (_yawPending) {
@@ -460,10 +471,11 @@ class _ScreenSurfaceState extends State<_ScreenSurface> {
       if (!mounted) return;
       try {
         await _preview.start();
-        return;
       } on MobileScannerException catch (_) {
         // Still busy; try again.
       }
+      // A failed start is also reported through the controller's value.
+      if (!mounted || _preview.value.isRunning) return;
     }
   }
 

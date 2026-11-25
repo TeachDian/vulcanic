@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.Surface
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -47,6 +48,12 @@ class ArBridge(
     /** Set while the activity is in the background. */
     private var inBackground = false
 
+    /** Set once the Flutter engine is going away. */
+    private var disposed = false
+
+    private val displayRotation: Int
+        get() = activity.display?.rotation ?: Surface.ROTATION_0
+
     init {
         methods.setMethodCallHandler(this)
         frames.setStreamHandler(this)
@@ -54,6 +61,7 @@ class ArBridge(
     }
 
     fun dispose() {
+        disposed = true
         (activity as? LifecycleOwner)?.lifecycle?.removeObserver(this)
         methods.setMethodCallHandler(null)
         frames.setStreamHandler(null)
@@ -184,23 +192,32 @@ class ArBridge(
         val session = ArSessionRunner(
             context = activity.applicationContext,
             onFrame = { packet -> main.post { sink?.success(packet) } },
-            onError = { code, message -> main.post { sink?.error(code, message, null) } },
+            onError = { code, message -> main.post { fail(code, message) } },
         )
         texture.setCallback(object : TextureRegistry.SurfaceProducer.Callback {
             override fun onSurfaceAvailable() {
                 if (runner === session) {
-                    session.setWindow(texture.surface, texture.width, texture.height)
+                    session.setWindow(
+                        texture.surface,
+                        texture.width,
+                        texture.height,
+                        displayRotation,
+                    )
                 }
             }
 
             override fun onSurfaceCleanup() {
-                if (runner === session) session.setWindow(null, 0, 0)
+                if (runner === session) session.setWindow(null, 0, 0, displayRotation)
             }
         })
         producer = texture
         runner = session
-        // The texture must outlive the GL surface that draws into it.
-        session.start(texture.surface, width, height) { main.post { texture.release() } }
+        // The texture must outlive the GL surface that draws into it. By the
+        // time the AR thread has wound down the engine may be gone, in which
+        // case there is nothing left to release.
+        session.start(texture.surface, width, height, displayRotation) {
+            main.post { if (!disposed) runCatching { texture.release() } }
+        }
         if (inBackground) session.pause()
         result.success(mapOf("textureId" to texture.id()))
     }
@@ -209,7 +226,15 @@ class ArBridge(
         val texture = producer ?: return
         if (texture.width == width && texture.height == height) return
         texture.setSize(width, height)
-        runner?.setWindow(texture.surface, width, height)
+        runner?.setWindow(texture.surface, width, height, displayRotation)
+    }
+
+    /** The AR thread has died; tell Flutter and forget the session. */
+    private fun fail(code: String, message: String) {
+        producer?.setCallback(null)
+        runner = null
+        producer = null
+        sink?.error(code, message, null)
     }
 
     private fun stop() {
