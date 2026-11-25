@@ -73,6 +73,12 @@ class _SurfaceScreenState extends State<SurfaceScreen>
     var availability = initial
         ? await ArSession.warmUp()
         : await ArSession.availability();
+    // The early answer may be out of date (AR services installed since) or
+    // a check that timed out. Anything short of "supported" is asked again;
+    // a settled answer comes back at once.
+    if (initial && availability != ArAvailability.supported) {
+      availability = await ArSession.availability();
+    }
     if (!mounted) return;
 
     // Capable, but Google's AR services are missing or out of date: offer
