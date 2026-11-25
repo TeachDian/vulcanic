@@ -176,3 +176,57 @@ class TrackingPainter extends CustomPainter {
       old.showReticle != showReticle ||
       old.reticleFraction != reticleFraction;
 }
+
+/// A ring that spreads over the surface from where the volcano was just
+/// put down, so the placement reads as landing on something.
+class RipplePainter extends CustomPainter {
+  RipplePainter({
+    required Listenable repaint,
+    required this.age,
+    required this.pose,
+  }) : super(repaint: repaint);
+
+  /// Seconds since the model was placed.
+  final double Function() age;
+
+  /// The camera's view-projection matrix and the anchor the model stands
+  /// on, or null when there is nothing to draw on.
+  final (Matrix4, Matrix4)? Function(Size size) pose;
+
+  static const double _duration = 0.75;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = age() / _duration;
+    if (t <= 0 || t >= 1) return;
+    final matrices = pose(size);
+    if (matrices == null) return;
+    final m = (matrices.$1 * matrices.$2).storage;
+    final hw = size.width / 2, hh = size.height / 2;
+    // Fast out, slow to stop: the way a ripple loses energy.
+    final spread = 1 - math.pow(1 - t, 3).toDouble();
+    // In anchor units; the pose's scale sets the real size.
+    final radius = 1.5 * spread;
+    final path = Path();
+    const steps = 44;
+    for (var i = 0; i <= steps; i++) {
+      final a = 2 * math.pi * i / steps;
+      final x = radius * math.cos(a), z = radius * math.sin(a);
+      final w = m[3] * x + m[11] * z + m[15];
+      if (w <= 0.02) return;
+      final px = hw + (m[0] * x + m[8] * z + m[12]) / w * hw;
+      final py = hh - (m[1] * x + m[9] * z + m[13]) / w * hh;
+      i == 0 ? path.moveTo(px, py) : path.lineTo(px, py);
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..color = Palette.bone.withValues(alpha: 0.85 * (1 - t)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(RipplePainter old) => true;
+}

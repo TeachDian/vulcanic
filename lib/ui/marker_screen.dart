@@ -108,7 +108,8 @@ class _MarkerSceneState extends State<_MarkerScene> {
 
     if (marker != _marker) {
       HapticFeedback.mediumImpact();
-      // Each marker brings up its own content.
+      // Each marker brings up its own content, and it rises into place.
+      _controller.arrive();
       _controller.cutaway = marker == VulcanicMarker.crossSection;
       setState(() {
         _marker = marker;
@@ -152,7 +153,7 @@ class _MarkerSceneState extends State<_MarkerScene> {
         width: _width,
         lift: widget.geometry.restDepth(_controller.cutawayT),
         rotation: _controller.rotation,
-        scale: _controller.scale,
+        scale: _controller.scale * _controller.arrivalScale,
       ),
       opacity: _opacity,
     );

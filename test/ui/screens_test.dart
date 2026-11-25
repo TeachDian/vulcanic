@@ -109,7 +109,7 @@ void main() {
     await save(tester, 'screen_explorer');
 
     await tester.tap(find.bySemanticsLabel('Erupt eruption'));
-    await advance(tester, 6);
+    await advance(tester, 3.6);
     expect(find.text('Pause'), findsOneWidget);
     expect(find.text('Eruption'), findsOneWidget);
     await tester.tap(find.bySemanticsLabel('Inside'));

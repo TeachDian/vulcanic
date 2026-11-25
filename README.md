@@ -64,8 +64,10 @@ opens straight into the cutaway.
 the camera button: zoom in, zoom out and a quarter turn to the next side (the
 explorer adds a view from above). The view also moves by itself: opening the
 cutaway turns the opening to face you and zooms in, and selecting a component
-brings it round. *Erupt* plays a four-step
-sequence (magma rises, eruption, lava flows, cooling). *Inside* opens the
+brings it round. *Erupt* plays an 18 second
+sequence: three seconds of build-up as the ground trembles and the crater
+glow quickens, a burst, a pulsing ash column, lava that advances in surges,
+and a slow cooling. *Inside* opens the
 cutaway. Tap a label or a number to open a component's card, and *Listen* to
 have it read aloud. The camera button saves a picture to the gallery.
 
@@ -178,6 +180,13 @@ ARCore does the tracking and Flutter draws everything.
 
 `lib/narration/` reads a component's description with Android's
 text-to-speech, choosing a female English voice from those installed.
+
+### Motion
+
+Each kind of movement has its own feel. Turning the model is a spring with a
+little overshoot; zooming is damped so it never bounces. A placed model
+rises into place while a ring spreads over the surface from where it landed.
+The component sheet rises from the edge and its lines follow one by one.
 
 ## Limits worth knowing
 
