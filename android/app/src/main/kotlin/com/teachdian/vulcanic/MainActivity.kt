@@ -19,7 +19,7 @@ class MainActivity : FlutterActivity() {
         ar = ArBridge(this, messenger, flutterEngine.renderer)
         media = MediaBridge(this, messenger)
         narration = NarrationBridge(this, messenger)
-        motion = MotionBridge(applicationContext, messenger)
+        motion = MotionBridge(this, messenger)
     }
 
     override fun onRequestPermissionsResult(
