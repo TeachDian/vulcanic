@@ -368,12 +368,12 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
   }
 
   (String, Color) get _status => switch (_tracking) {
-    _Tracking.starting => ('Starting camera', Palette.caution),
-    _Tracking.limited => ('Finding the room', Palette.caution),
-    _Tracking.searching => ('Looking for a surface', Palette.caution),
+    _Tracking.starting => ('Starting', Palette.caution),
+    _Tracking.limited => ('Scanning', Palette.caution),
+    _Tracking.searching => ('Scanning', Palette.caution),
     _Tracking.ready => ('Surface found', Palette.good),
     _Tracking.anchored => ('Anchored', Palette.good),
-    _Tracking.lost => ('Tracking lost', Palette.caution),
+    _Tracking.lost => ('Lost', Palette.caution),
   };
 
   Widget? get _banner {
@@ -430,29 +430,31 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
     return SceneChrome(
       controller: _controller,
       showControls: _placed,
-      status: StatusPill(label: label, color: color),
+      status: StatusText(label: label, color: color),
       banner: _banner,
       trailing: [
-        GlassIconButton(
+        BarButton(
           icon: _showSurfaces ? Icons.grid_on_rounded : Icons.grid_off_rounded,
           tooltip: 'Show detected surfaces',
           onPressed: () => setState(() => _showSurfaces = !_showSurfaces),
         ),
-        GlassIconButton(
+        BarButton(
           icon: Icons.touch_app_rounded,
           tooltip: 'Use screen placement',
           onPressed: widget.onSwitch,
         ),
       ],
-      modeAction: DockAction(
-        icon: Icons.open_with_rounded,
-        label: 'Move',
-        active: _placing,
-        onPressed: () => setState(() {
-          _placing = !_placing;
-          if (_placing) _showSurfaces = true;
-        }),
-      ),
+      viewActions: [
+        ViewAction(
+          icon: Icons.open_with_rounded,
+          tooltip: 'Move',
+          active: _placing,
+          onPressed: () => setState(() {
+            _placing = !_placing;
+            if (_placing) _showSurfaces = true;
+          }),
+        ),
+      ],
       scene: LayoutBuilder(
         builder: (context, constraints) {
           final size = constraints.biggest;
@@ -586,26 +588,25 @@ class _ScreenSurfaceState extends State<_ScreenSurface> {
     final notice = widget.notice;
     return SceneChrome(
       controller: _controller,
-      status: const StatusPill(
-        label: 'Screen placement',
-        icon: Icons.touch_app_rounded,
-      ),
+      status: const StatusText(label: 'On screen'),
       trailing: [
         if (widget.onSwitch != null)
-          GlassIconButton(
+          BarButton(
             icon: Icons.view_in_ar_rounded,
             tooltip: 'Use surface tracking',
             onPressed: widget.onSwitch,
           ),
       ],
-      modeAction: DockAction(
-        icon: Icons.filter_center_focus_rounded,
-        label: 'Recentre',
-        onPressed: () {
-          _anchor = null;
-          _controller.resetTransform();
-        },
-      ),
+      viewActions: [
+        ViewAction(
+          icon: Icons.filter_center_focus_rounded,
+          tooltip: 'Recentre',
+          onPressed: () {
+            _anchor = null;
+            _controller.resetTransform();
+          },
+        ),
+      ],
       banner: _moved && widget.onInstall == null
           ? null
           : HintBanner(
@@ -688,7 +689,7 @@ class _CheckingSupport extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GlassIconButton(
+            BarButton(
               icon: Icons.arrow_back_rounded,
               tooltip: 'Back',
               onPressed: () => Navigator.of(context).maybePop(),
@@ -703,10 +704,10 @@ class _CheckingSupport extends StatelessWidget {
                     dimension: 26,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.4,
-                      color: Palette.ember,
+                      color: Palette.bone,
                     ),
                   ),
-                  Text('Checking for surface tracking', style: AppText.label),
+                  Text('Checking this phone', style: AppText.label),
                 ],
               ),
             ),

@@ -61,7 +61,7 @@ class _CameraGateState extends State<CameraGate> with WidgetsBindingObserver {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GlassIconButton(
+            BarButton(
               icon: Icons.arrow_back_rounded,
               tooltip: 'Back',
               onPressed: () => Navigator.of(context).maybePop(),
@@ -73,25 +73,17 @@ class _CameraGateState extends State<CameraGate> with WidgetsBindingObserver {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Palette.ember.withValues(alpha: 0.14),
-                      ),
-                      child: const Icon(
-                        Icons.photo_camera_rounded,
-                        color: Palette.ember,
-                        size: 32,
-                      ),
+                    const Icon(
+                      Icons.photo_camera_outlined,
+                      color: Palette.bone,
+                      size: 34,
                     ),
-                    const SizedBox(height: 28),
-                    Text('The camera\nis the stage.', style: AppText.display),
+                    const SizedBox(height: 22),
+                    Text('Camera access', style: AppText.display),
                     const SizedBox(height: 14),
                     Text(
-                      'Vulcanic shows the volcano on top of what your camera '
-                      'sees. Nothing is recorded or sent anywhere.',
+                      'The volcano is shown on top of what the camera sees. '
+                      'Nothing is recorded.',
                       style: AppText.body.copyWith(fontSize: 16),
                     ),
                     const SizedBox(height: 28),
@@ -100,12 +92,14 @@ class _CameraGateState extends State<CameraGate> with WidgetsBindingObserver {
                           ? CameraPermission.openSettings
                           : () => _check(request: true),
                       style: FilledButton.styleFrom(
-                        backgroundColor: Palette.ember,
-                        foregroundColor: const Color(0xFF1A0E08),
+                        backgroundColor: Palette.bone,
+                        foregroundColor: Palette.onBone,
                         minimumSize: const Size.fromHeight(58),
-                        textStyle: AppText.title,
+                        textStyle: AppText.title.copyWith(
+                          color: Palette.onBone,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(29),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                       child: Text(

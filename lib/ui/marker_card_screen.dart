@@ -69,13 +69,13 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Row(
                 children: [
-                  GlassIconButton(
+                  BarButton(
                     icon: Icons.arrow_back_rounded,
                     tooltip: 'Back',
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                   const Spacer(),
-                  GlassIconButton(
+                  BarButton(
                     icon: Icons.download_rounded,
                     tooltip: 'Save this marker to the gallery',
                     onPressed: _save,
@@ -129,9 +129,9 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
                       spacing: 3,
                       children: [
                         Text(
-                          'MARKER ${marker.number} OF '
+                          '${marker.number} / '
                           '${VulcanicMarker.values.length.toString().padLeft(2, '0')}',
-                          style: AppText.overline,
+                          style: AppText.caption,
                         ),
                         Text(
                           _saved ?? marker.caption,
@@ -149,7 +149,7 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
                           width: i == _page ? 22 : 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: i == _page ? Palette.ember : Palette.slate,
+                            color: i == _page ? Palette.bone : Palette.raise,
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),

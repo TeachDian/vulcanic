@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 
 import '../../engine/eruption.dart';
 import '../../engine/volcano_controller.dart';
-import '../../engine/volcano_geometry.dart';
 import '../theme.dart';
 
-/// A circular glass button, used along the top of every scene.
-class GlassIconButton extends StatelessWidget {
-  const GlassIconButton({
+/// A plain icon button for the top bar. It has no container of its own;
+/// a soft shadow keeps it readable over the camera.
+class BarButton extends StatelessWidget {
+  const BarButton({
     super.key,
     required this.icon,
     required this.tooltip,
@@ -23,93 +23,230 @@ class GlassIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Glass(
-      radius: 24,
-      child: SizedBox.square(
-        dimension: 48,
-        child: IconButton(
-          icon: Icon(icon, size: 22),
-          color: Palette.bone,
-          tooltip: tooltip,
-          onPressed: onPressed,
-        ),
+    return SizedBox.square(
+      dimension: 44,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        icon: Icon(icon, size: 23, shadows: AppText.overCamera),
+        color: Palette.bone,
+        tooltip: tooltip,
+        onPressed: onPressed,
       ),
     );
   }
 }
 
-/// One of the small labelled actions in the dock.
-class DockAction {
-  const DockAction({
+/// A button in the view rail.
+class ViewAction {
+  const ViewAction({
     required this.icon,
-    required this.label,
+    required this.tooltip,
     required this.onPressed,
     this.active = false,
   });
 
   final IconData icon;
-  final String label;
-  final VoidCallback? onPressed;
+  final String tooltip;
+  final VoidCallback onPressed;
 
-  /// Toggles are drawn filled while on.
+  /// Drawn filled while a mode it switches on is in effect.
   final bool active;
 }
 
-class _DockButton extends StatelessWidget {
-  const _DockButton(this.action);
-  final DockAction action;
+/// Buttons that move the view without a gesture: zoom in, zoom out and a
+/// quarter turn, followed by whatever the current mode adds.
+class ViewRail extends StatelessWidget {
+  const ViewRail({super.key, required this.controller, this.extra = const []});
+
+  final VolcanoController controller;
+  final List<ViewAction> extra;
 
   @override
   Widget build(BuildContext context) {
-    final enabled = action.onPressed != null;
-    final foreground = action.active ? Palette.ink : Palette.bone;
+    final actions = [
+      ViewAction(
+        icon: Icons.add_rounded,
+        tooltip: 'Zoom in',
+        onPressed: () => controller.zoomBy(1.25),
+      ),
+      ViewAction(
+        icon: Icons.remove_rounded,
+        tooltip: 'Zoom out',
+        onPressed: () => controller.zoomBy(1 / 1.25),
+      ),
+      ViewAction(
+        icon: Icons.rotate_90_degrees_cw_outlined,
+        tooltip: 'Turn to the next side',
+        onPressed: () => controller.turnBy(math.pi / 2),
+      ),
+      ...extra,
+    ];
+    return Panel(
+      radius: const BorderRadius.all(Radius.circular(14)),
+      opacity: 0.72,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (i, action) in actions.indexed) ...[
+            if (i > 0) Container(width: 40, height: 1, color: Palette.line()),
+            SizedBox.square(
+              dimension: 40,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: Icon(action.icon, size: 20),
+                color: action.active ? Palette.onBone : Palette.bone,
+                style: action.active
+                    ? IconButton.styleFrom(backgroundColor: Palette.bone)
+                    : null,
+                tooltip: action.tooltip,
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  action.onPressed();
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The one place for controls: the eruption's trace and trigger, with the
+/// two view toggles either side.
+class Console extends StatelessWidget {
+  const Console({super.key, required this.controller});
+  final VolcanoController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final phase = controller.eruption.phase;
+        final changed = phase != null || controller.transformed;
+        return Panel(
+          radius: const BorderRadius.all(Radius.circular(24)),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 34,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CustomPaint(painter: _Seismograph(controller)),
+                          // The only caption: which step is playing.
+                          AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: phase == null ? 0 : 1,
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: Text(
+                                phase?.label ?? '',
+                                style: AppText.caption.copyWith(fontSize: 11),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: changed ? 1 : 0,
+                      child: IgnorePointer(
+                        ignoring: !changed,
+                        child: SizedBox.square(
+                          dimension: 34,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.restart_alt_rounded,
+                              size: 20,
+                            ),
+                            color: Palette.ash,
+                            tooltip: 'Reset',
+                            onPressed: controller.reset,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _Toggle(
+                    icon: Icons.pie_chart_outline_rounded,
+                    label: 'Inside',
+                    active: controller.cutaway,
+                    onPressed: () => controller.cutaway = !controller.cutaway,
+                  ),
+                  EruptButton(controller: controller),
+                  _Toggle(
+                    icon: Icons.sell_outlined,
+                    label: 'Labels',
+                    active: controller.labels,
+                    onPressed: () => controller.labels = !controller.labels,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// An icon-only switch. Its name is there for screen readers and as a
+/// long-press tooltip, not as a caption.
+class _Toggle extends StatelessWidget {
+  const _Toggle({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      toggled: action.active,
-      label: action.label,
+      toggled: active,
+      label: label,
       excludeSemantics: true,
-      child: Opacity(
-        opacity: enabled ? 1 : 0.35,
+      child: Tooltip(
+        message: label,
         child: InkResponse(
-          onTap: enabled
-              ? () {
-                  HapticFeedback.selectionClick();
-                  action.onPressed!();
-                }
-              : null,
-          radius: 34,
-          child: SizedBox(
-            width: double.infinity,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: action.active
-                        ? Palette.bone
-                        : Colors.white.withValues(alpha: 0.07),
-                    border: Border.all(
-                      color: Palette.line(action.active ? 0 : 0.10),
-                    ),
-                  ),
-                  child: Icon(action.icon, size: 21, color: foreground),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  action.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.fade,
-                  softWrap: false,
-                  style: AppText.caption.copyWith(
-                    fontSize: 10.5,
-                    color: action.active ? Palette.bone : Palette.ash,
-                  ),
-                ),
-              ],
+          radius: 30,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onPressed();
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active ? Palette.raise : Colors.transparent,
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: active ? Palette.bone : Palette.ash,
             ),
           ),
         ),
@@ -118,7 +255,7 @@ class _DockButton extends StatelessWidget {
   }
 }
 
-/// The eruption trigger: a large ember button ringed by its own progress.
+/// The eruption trigger: the one filled button on the screen.
 class EruptButton extends StatelessWidget {
   const EruptButton({super.key, required this.controller});
   final VolcanoController controller;
@@ -145,387 +282,98 @@ class EruptButton extends StatelessWidget {
       button: true,
       label: '$label eruption',
       excludeSemantics: true,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          controller.toggleEruption();
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox.square(
-              dimension: 76,
-              child: CustomPaint(
-                painter: _ProgressRing(controller),
-                child: Center(
-                  child: Container(
-                    width: 62,
-                    height: 62,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: Palette.emberGradient,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Palette.ember.withValues(alpha: 0.45),
-                          blurRadius: 24,
-                          spreadRadius: -4,
-                        ),
-                      ],
-                    ),
-                    child: Icon(icon, size: 32, color: const Color(0xFF1A0E08)),
+      child: Material(
+        color: Palette.bone,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            controller.toggleEruption();
+          },
+          child: SizedBox(
+            height: 48,
+            width: 132,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 6,
+              children: [
+                Icon(icon, size: 22, color: Palette.onBone),
+                Text(
+                  label,
+                  style: AppText.label.copyWith(
+                    fontSize: 14.5,
+                    color: Palette.onBone,
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(label, style: AppText.label.copyWith(fontSize: 11.5)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProgressRing extends CustomPainter {
-  _ProgressRing(this.controller) : super(repaint: controller.frame);
-  final VolcanoController controller;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(1.5);
-    final track = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..color = Palette.line(0.12);
-    canvas.drawArc(rect, 0, math.pi * 2, false, track);
-    final progress = controller.eruption.progress;
-    if (progress <= 0) return;
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      math.pi * 2 * progress,
-      false,
-      track
-        ..color = Palette.glow
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ProgressRing old) => old.controller != controller;
-}
-
-/// The floating control bar: two view toggles, the eruption trigger, one
-/// action that belongs to the current mode, and reset.
-class ControlDock extends StatelessWidget {
-  const ControlDock({super.key, required this.controller, this.modeAction});
-
-  final VolcanoController controller;
-  final DockAction? modeAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: controller,
-      builder: (context, _) => Glass(
-        radius: 36,
-        padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: _DockButton(
-                DockAction(
-                  icon: Icons.pie_chart_outline_rounded,
-                  label: 'Inside',
-                  active: controller.cutaway,
-                  onPressed: () => controller.cutaway = !controller.cutaway,
-                ),
-              ),
-            ),
-            Expanded(
-              child: _DockButton(
-                DockAction(
-                  icon: Icons.sell_outlined,
-                  label: 'Labels',
-                  active: controller.labels,
-                  onPressed: () => controller.labels = !controller.labels,
-                ),
-              ),
-            ),
-            EruptButton(controller: controller),
-            Expanded(
-              child: modeAction == null
-                  ? const SizedBox.shrink()
-                  : _DockButton(modeAction!),
-            ),
-            Expanded(
-              child: _DockButton(
-                DockAction(
-                  icon: Icons.restart_alt_rounded,
-                  label: 'Reset',
-                  onPressed: controller.reset,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The four steps of the eruption, filling as the sequence plays.
-class PhaseStrip extends StatelessWidget {
-  const PhaseStrip({super.key, required this.controller});
-  final VolcanoController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: controller,
-      builder: (context, _) {
-        final phase = controller.eruption.phase;
-        return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 260),
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SizeTransition(
-              sizeFactor: animation,
-              alignment: Alignment.bottomCenter,
-              child: child,
+              ],
             ),
           ),
-          child: phase == null
-              ? const SizedBox(width: double.infinity)
-              : Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                  child: Row(
-                    spacing: 6,
-                    children: [
-                      for (final step in EruptionPhase.values)
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            spacing: 7,
-                            children: [
-                              SizedBox(
-                                height: 3,
-                                width: double.infinity,
-                                child: CustomPaint(
-                                  painter: _PhaseBar(controller, step),
-                                ),
-                              ),
-                              Text(
-                                step.label,
-                                maxLines: 1,
-                                softWrap: false,
-                                overflow: TextOverflow.fade,
-                                style: AppText.caption.copyWith(
-                                  fontSize: 10.5,
-                                  color: step == phase
-                                      ? Palette.bone
-                                      : Palette.smoke,
-                                  shadows: const [
-                                    Shadow(
-                                      color: Colors.black54,
-                                      blurRadius: 8,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-        );
-      },
+        ),
+      ),
     );
   }
-
-  static double _end(EruptionPhase step) =>
-      step.index + 1 < EruptionPhase.values.length
-      ? EruptionPhase.values[step.index + 1].start
-      : Eruption.duration;
-
-  static double _length(EruptionPhase step) => _end(step) - step.start;
 }
 
-class _PhaseBar extends CustomPainter {
-  _PhaseBar(this.controller, this.step) : super(repaint: controller.frame);
+/// The eruption drawn as a seismograph trace: calm while the volcano is
+/// quiet, rough where the ground shakes. The played part is bright and a
+/// playhead in heat colour marks the moment.
+class _Seismograph extends CustomPainter {
+  _Seismograph(this.controller) : super(repaint: controller.frame);
   final VolcanoController controller;
-  final EruptionPhase step;
+
+  /// A probe used only to read how violent each moment of the sequence is.
+  static final Eruption _probe = Eruption();
+
+  static double _violence(double time) {
+    _probe.time = time;
+    return 0.9 * _probe.tremor + 0.45 * _probe.plume + 0.25 * _probe.fragments;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final radius = Radius.circular(size.height);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Offset.zero & size, radius),
-      Paint()..color = Colors.white.withValues(alpha: 0.18),
-    );
     final time = controller.eruption.time;
-    final fill = ((time - step.start) / PhaseStrip._length(step)).clamp(
-      0.0,
-      1.0,
+    final mid = size.height * 0.62;
+    final reach = size.height * 0.36;
+    final played = Path(), ahead = Path();
+    final playheadX = size.width * time / Eruption.duration;
+    var startedPlayed = false, startedAhead = false;
+    for (var x = 0.0; x <= size.width; x += 2) {
+      final t = x / size.width * Eruption.duration;
+      // Two detuned sines read as a needle scratching, and never change
+      // from frame to frame.
+      final wobble = math.sin(x * 1.31) * 0.6 + math.sin(x * 0.47 + 1.3) * 0.4;
+      final y = mid + wobble * (0.6 + reach * _violence(t));
+      if (x <= playheadX) {
+        startedPlayed ? played.lineTo(x, y) : played.moveTo(x, y);
+        startedPlayed = true;
+      }
+      if (x >= playheadX - 2) {
+        startedAhead ? ahead.lineTo(x, y) : ahead.moveTo(x, y);
+        startedAhead = true;
+      }
+    }
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(
+      ahead,
+      stroke..color = Palette.bone.withValues(alpha: 0.26),
     );
-    if (fill <= 0) return;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, size.width * fill, size.height),
-        radius,
-      ),
-      Paint()..color = Palette.glow,
-    );
+    if (time > 0) {
+      canvas.drawPath(played, stroke..color = Palette.bone);
+      canvas.drawLine(
+        Offset(playheadX, size.height * 0.28),
+        Offset(playheadX, size.height),
+        Paint()
+          ..color = Palette.heat
+          ..strokeWidth = 1.6
+          ..strokeCap = StrokeCap.round,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(_PhaseBar old) =>
-      old.controller != controller || old.step != step;
-}
-
-/// A button in the view rail.
-class ViewAction {
-  const ViewAction({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-}
-
-/// Buttons that move the view without a gesture: zoom in, zoom out, and a
-/// quarter turn to the next side. Each step is eased by the controller.
-class ViewRail extends StatelessWidget {
-  const ViewRail({super.key, required this.controller, this.extra = const []});
-
-  final VolcanoController controller;
-
-  /// Mode-specific buttons, shown after the standard three.
-  final List<ViewAction> extra;
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = [
-      ViewAction(
-        icon: Icons.add_rounded,
-        tooltip: 'Zoom in',
-        onPressed: () => controller.zoomBy(1.25),
-      ),
-      ViewAction(
-        icon: Icons.remove_rounded,
-        tooltip: 'Zoom out',
-        onPressed: () => controller.zoomBy(1 / 1.25),
-      ),
-      ViewAction(
-        icon: Icons.rotate_90_degrees_cw_outlined,
-        tooltip: 'Turn to the next side',
-        onPressed: () => controller.turnBy(math.pi / 2),
-      ),
-      ...extra,
-    ];
-    return Glass(
-      radius: 24,
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final action in actions)
-            SizedBox.square(
-              dimension: 46,
-              child: IconButton(
-                icon: Icon(action.icon, size: 21),
-                color: Palette.bone,
-                tooltip: action.tooltip,
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  action.onPressed();
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Numbered shortcuts to the five components, matching the labels on the
-/// model.
-class PartRail extends StatelessWidget {
-  const PartRail({super.key, required this.controller});
-  final VolcanoController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: controller,
-      builder: (context, _) => Glass(
-        radius: 26,
-        padding: const EdgeInsets.all(5),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 4,
-          children: [
-            for (final part in VolcanoPart.values)
-              _RailButton(
-                part: part,
-                selected: controller.selected == part,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  controller.select(controller.selected == part ? null : part);
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RailButton extends StatelessWidget {
-  const _RailButton({
-    required this.part,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final VolcanoPart part;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: part.label,
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: selected ? Palette.ember : Colors.transparent,
-          ),
-          child: Text(
-            part.number,
-            style: AppText.label.copyWith(
-              fontSize: 12,
-              color: selected ? const Color(0xFF1A0E08) : Palette.ash,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  bool shouldRepaint(_Seismograph old) => old.controller != controller;
 }

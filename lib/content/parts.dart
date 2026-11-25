@@ -14,6 +14,7 @@ class Fact {
 class PartInfo {
   const PartInfo({
     required this.tagline,
+    required this.summary,
     required this.description,
     required this.facts,
     required this.icon,
@@ -21,7 +22,10 @@ class PartInfo {
 
   final String tagline;
 
-  /// Shown on the detail card and read aloud by the narrator.
+  /// Two sentences for the card.
+  final String summary;
+
+  /// The fuller explanation, read aloud by the narrator.
   final String description;
   final List<Fact> facts;
   final IconData icon;
@@ -35,6 +39,9 @@ const Map<VolcanoPart, PartInfo> _info = {
   VolcanoPart.cone: PartInfo(
     icon: Icons.landscape_rounded,
     tagline: 'The mountain an eruption builds',
+    summary:
+        'The mountain you see from outside, built layer by layer by earlier '
+        'eruptions. This one is a stratovolcano, steep near its crater.',
     description:
         'The cone is the volcano you see from the outside. It grows layer by '
         'layer from the lava, ash and rock thrown out by earlier eruptions. '
@@ -49,6 +56,9 @@ const Map<VolcanoPart, PartInfo> _info = {
   VolcanoPart.terrain: PartInfo(
     icon: Icons.layers_rounded,
     tagline: 'The crust beneath the volcano',
+    summary:
+        'Bands of older rock under the volcano, laid down over millions of '
+        'years. Magma forces its way up through cracks in them.',
     description:
         'Under the volcano lies the crust: bands of older rock laid down '
         'over millions of years. Magma forces its way up through cracks in '
@@ -62,6 +72,9 @@ const Map<VolcanoPart, PartInfo> _info = {
   VolcanoPart.chamber: PartInfo(
     icon: Icons.bubble_chart_rounded,
     tagline: 'Where molten rock waits',
+    summary:
+        'A reservoir of molten rock deep underground. Pressure builds here '
+        'until the rock above can no longer hold it.',
     description:
         'The magma chamber is a reservoir of molten rock stored deep '
         'underground. As more magma arrives and the gas dissolved in it '
@@ -76,6 +89,9 @@ const Map<VolcanoPart, PartInfo> _info = {
   VolcanoPart.conduit: PartInfo(
     icon: Icons.vertical_align_top_rounded,
     tagline: 'The passage to the surface',
+    summary:
+        'The pipe from the magma chamber to the crater. Magma races up it '
+        'as the gas inside expands, like soda from a shaken bottle.',
     description:
         'The conduit is the pipe that connects the magma chamber to the '
         'crater. During an eruption, magma races up it as the gas inside '
@@ -89,6 +105,9 @@ const Map<VolcanoPart, PartInfo> _info = {
   VolcanoPart.lava: PartInfo(
     icon: Icons.local_fire_department_rounded,
     tagline: 'Molten rock above ground',
+    summary:
+        'Magma that has reached the surface. It glows orange while hot, '
+        'then darkens and hardens into a new layer of rock.',
     description:
         'Once magma reaches the surface it is called lava. It spills from '
         'the crater and runs downhill, glowing orange while it is hot. As it '

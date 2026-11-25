@@ -109,10 +109,6 @@ class _ExplorerScreenState extends State<ExplorerScreen> {
     final overhead = _restingElevation > (_level + _overhead) / 2;
     return SceneChrome(
       controller: _controller,
-      status: const StatusPill(
-        label: '3D explorer',
-        icon: Icons.threed_rotation_rounded,
-      ),
       viewActions: [
         ViewAction(
           icon: overhead
@@ -121,18 +117,18 @@ class _ExplorerScreenState extends State<ExplorerScreen> {
           tooltip: overhead ? 'View from the side' : 'View from above',
           onPressed: _toggleTilt,
         ),
+        ViewAction(
+          icon: Icons.filter_center_focus_rounded,
+          tooltip: 'Recentre',
+          onPressed: _recentre,
+        ),
       ],
-      modeAction: DockAction(
-        icon: Icons.filter_center_focus_rounded,
-        label: 'Recentre',
-        onPressed: _recentre,
-      ),
       scene: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: RadialGradient(
             center: Alignment(0, -0.25),
             radius: 1.05,
-            colors: [Color(0xFF2A1A14), Palette.ink],
+            colors: [Color(0xFF1C2630), Palette.ink],
           ),
         ),
         child: SceneGestures(

@@ -7,7 +7,7 @@ void main() {
     // The models load through the real asset bundle, off the fake clock.
     for (
       var i = 0;
-      i < 50 && find.text('Explore in 3D').evaluate().isEmpty;
+      i < 50 && find.text('Just the model').evaluate().isEmpty;
       i++
     ) {
       await tester.runAsync(
@@ -15,6 +15,6 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 500));
     }
-    expect(find.text('Explore in 3D'), findsOneWidget);
+    expect(find.text('Just the model'), findsOneWidget);
   });
 }

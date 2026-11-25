@@ -168,29 +168,28 @@ class _MarkerSceneState extends State<_MarkerScene> {
   Widget build(BuildContext context) {
     final marker = _marker;
     final (label, color) = switch (_lock) {
-      _Lock.searching => ('Looking for the marker', Palette.caution),
-      _Lock.locked => (
-        'Marker ${marker?.number ?? ''} · ${marker?.title ?? ''}',
-        Palette.good,
-      ),
-      _Lock.lost => ('Marker lost', Palette.caution),
+      _Lock.searching => ('Searching', Palette.caution),
+      _Lock.locked => (marker?.title ?? 'Marker', Palette.good),
+      _Lock.lost => ('Lost', Palette.caution),
     };
     return SceneChrome(
       controller: _controller,
       showControls: marker != null,
-      status: StatusPill(label: label, color: color),
+      status: StatusText(label: label, color: color),
       trailing: [
-        GlassIconButton(
+        BarButton(
           icon: Icons.qr_code_2_rounded,
           tooltip: 'Show the marker',
           onPressed: _showMarker,
         ),
       ],
-      modeAction: DockAction(
-        icon: Icons.filter_center_focus_rounded,
-        label: 'Straighten',
-        onPressed: _controller.resetTransform,
-      ),
+      viewActions: [
+        ViewAction(
+          icon: Icons.filter_center_focus_rounded,
+          tooltip: 'Straighten',
+          onPressed: _controller.resetTransform,
+        ),
+      ],
       banner: switch (_lock) {
         _Lock.locked => null,
         _Lock.lost => const HintBanner(
@@ -263,7 +262,7 @@ class _MarkerOutline extends CustomPainter {
     final path = Path()..addPolygon(corners, true);
     canvas.drawPath(
       path,
-      Paint()..color = Palette.ember.withValues(alpha: 0.14),
+      Paint()..color = Palette.bone.withValues(alpha: 0.10),
     );
     canvas.drawPath(
       path,
@@ -271,7 +270,7 @@ class _MarkerOutline extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.4
         ..strokeJoin = StrokeJoin.round
-        ..color = Palette.ember,
+        ..color = Palette.bone,
     );
     // The first corner is the code's top-left: it shows orientation.
     canvas.drawCircle(corners.first, 4.5, Paint()..color = Colors.white);

@@ -28,7 +28,7 @@ flutter:
   assets:
     - assets/models/
   fonts:
-    - family: Sora
+    - family: Archivo
       fonts:
-        - asset: assets/fonts/Sora.ttf
+        - asset: assets/fonts/Archivo.ttf
 

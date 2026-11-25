@@ -47,7 +47,7 @@ class MarkerCard extends StatelessWidget {
                     Icon(
                       Icons.change_history_rounded,
                       size: 5 * u,
-                      color: Palette.magma,
+                      color: _inkColor,
                     ),
                     SizedBox(width: 2 * u),
                     Text('VULCANIC', style: text(3.2, 700, spacing: 0.9)),
