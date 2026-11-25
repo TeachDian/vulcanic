@@ -190,3 +190,114 @@ class MarkerTracker {
     _sinceSeen = double.infinity;
   }
 }
+
+/// Takes the shake out of a marker pose.
+///
+/// A pose recovered from four corner points is exact when the corners are,
+/// but a pixel of noise in them swings the marker's apparent tilt by
+/// several degrees, so a model stood on the raw pose trembles even when
+/// nothing is moving. Three things steady it:
+///
+///  * **Levelling.** A marker lying on a table has a known tilt: none. When
+///    the phone can say which way is up, and the marker is roughly level,
+///    the model's vertical axis is taken from gravity and the marker only
+///    decides where the model is and which way it faces.
+///  * **A slow normal.** Without gravity, or for a marker on a wall, the
+///    marker's own normal is used, averaged over about half a second.
+///  * **Adaptive smoothing** of position and facing: heavy when the change
+///    is the size of the noise, light when the marker is really moving, so
+///    it is still at rest and still follows a moving marker closely.
+class MarkerStabilizer {
+  /// How far the marker may lean from level and still be levelled.
+  static const double levelWithin = 35 * math.pi / 180;
+
+  Vector3? _position;
+  Vector3? _heading;
+  Vector3? _normal;
+
+  /// True once a pose has been seen since the last [reset].
+  bool get hasPose => _position != null;
+
+  /// Forgets the pose, so the next one is taken as it comes. Call when the
+  /// marker returns after being lost.
+  void reset() {
+    _position = null;
+    _heading = null;
+    _normal = null;
+  }
+
+  /// Blend factor for a first-order filter with time constant [tau].
+  static double _blend(double dt, double tau) => 1 - math.exp(-dt / tau);
+
+  /// A time constant between [slow] and [fast], by how large [change] is
+  /// against the size at which it clearly is not noise.
+  static double _adaptive(
+    double change,
+    double clearly, {
+    required double slow,
+    required double fast,
+  }) {
+    final t = (change / clearly).clamp(0.0, 1.0);
+    return slow + (fast - slow) * t;
+  }
+
+  /// The steadied pose for the [raw] one from [MarkerPose.estimate].
+  ///
+  /// [up] is the direction away from the ground in camera space, when the
+  /// phone knows it. [dt] is the time since the last call, in seconds.
+  Matrix4 update(Matrix4 raw, {Vector3? up, required double dt}) {
+    final rawX = raw.getColumn(0).xyz;
+    final rawNormal = raw.getColumn(1).xyz;
+    final rawPosition = raw.getTranslation();
+    dt = dt.clamp(1 / 240, 0.1);
+
+    // The marker's normal, averaged over about half a second.
+    final normal = _normal == null
+        ? rawNormal.normalized()
+        : ((_normal! + (rawNormal - _normal!) * _blend(dt, 0.45))..normalize());
+    _normal = normal;
+
+    // Stand the model along gravity when the marker is close to level.
+    final axis = up != null && up.dot(normal) > math.cos(levelWithin)
+        ? up.normalized()
+        : normal;
+
+    // Facing: the marker's X axis, flattened onto the plane the model
+    // stands on.
+    Vector3 flatten(Vector3 v) => v - axis * v.dot(axis);
+    var target = flatten(rawX);
+    if (target.length2 < 1e-9) target = flatten(Vector3(1, 0, 0));
+    target.normalize();
+    var heading = _heading == null ? target : flatten(_heading!);
+    if (heading.length2 < 1e-9) heading = target;
+    heading.normalize();
+    final turn = math.acos(heading.dot(target).clamp(-1.0, 1.0));
+    final headingTau = _adaptive(turn, 0.10, slow: 0.40, fast: 0.05);
+    heading = (heading + (target - heading) * _blend(dt, headingTau))
+      ..normalize();
+    _heading = heading;
+
+    // Position. Distance along the line of sight is the noisiest part of
+    // a marker pose (it comes from the marker's apparent size), and the
+    // least visible on screen, so it is held more firmly than movement
+    // across the view.
+    final previous = _position ?? rawPosition;
+    final depth = math.max(1e-6, rawPosition.length);
+    final ray = rawPosition / depth;
+    final delta = rawPosition - previous;
+    final along = delta.dot(ray);
+    final across = (delta - ray * along).length;
+    final moved = math.max(across / depth / 0.012, along.abs() / depth / 0.08);
+    final positionTau = _adaptive(moved, 1, slow: 0.35, fast: 0.04);
+    final position = previous + delta * _blend(dt, positionTau);
+    _position = position;
+
+    final z = heading.cross(axis)..normalize();
+    return Matrix4.columns(
+      Vector4(heading.x, heading.y, heading.z, 0),
+      Vector4(axis.x, axis.y, axis.z, 0),
+      Vector4(z.x, z.y, z.z, 0),
+      Vector4(position.x, position.y, position.z, 1),
+    );
+  }
+}
