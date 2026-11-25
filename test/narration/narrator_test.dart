@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vulcanic/content/parts.dart';
 import 'package:vulcanic/engine/volcano_geometry.dart';
@@ -104,6 +105,56 @@ void main() {
         expect(text, contains(Narrator.scriptFor(part)), reason: part.label);
         expect(text, contains('assets/narration/${part.asset}.m4a'));
       }
+    });
+  });
+
+  group('playing a recording', () {
+    const channel = MethodChannel('vulcanic/narration');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final calls = <String>[];
+    final narrator = Narrator.instance;
+
+    setUp(() {
+      calls.clear();
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call.method);
+        return call.method == 'play' ? true : null;
+      });
+      narrator.debugAssets = ['assets/narration/lava.m4a'];
+    });
+
+    tearDown(() async {
+      await narrator.stop();
+      messenger.setMockMethodCallHandler(channel, null);
+      narrator.debugAssets = null;
+    });
+
+    test('plays the clip instead of the speech engine', () async {
+      await narrator.toggle(VolcanoPart.lava);
+      expect(calls, ['play']);
+      expect(narrator.speaking, VolcanoPart.lava);
+    });
+
+    test('stopping a clip stops the player', () async {
+      await narrator.toggle(VolcanoPart.lava);
+      await narrator.toggle(VolcanoPart.lava); // the same button again
+      expect(calls, ['play', 'stop']);
+      expect(narrator.speaking, isNull);
+    });
+
+    test('the clip ending puts the button back', () async {
+      await narrator.toggle(VolcanoPart.lava);
+      // What the platform sends when the clip plays to its end.
+      await messenger.handlePlatformMessage(
+        channel.name,
+        channel.codec.encodeMethodCall(const MethodCall('done')),
+        (_) {},
+      );
+      expect(narrator.speaking, isNull);
+      // Nothing left to stop.
+      await narrator.stop();
+      expect(calls, ['play']);
     });
   });
 

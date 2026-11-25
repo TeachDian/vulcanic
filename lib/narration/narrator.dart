@@ -54,6 +54,12 @@ class Narrator extends ChangeNotifier {
     return null;
   }
 
+  /// Replaces the bundled asset list, so tests can pretend a recording
+  /// exists.
+  @visibleForTesting
+  set debugAssets(List<String>? assets) =>
+      _bundled = assets == null ? null : Future.value(assets);
+
   Future<List<String>> _listAssets() async {
     try {
       final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
@@ -124,9 +130,10 @@ class Narrator extends ChangeNotifier {
 
   Future<void> stop() async {
     if (_speaking == null) return;
+    // Read the flag first: clearing the speaker clears it too.
+    final wasClip = _playingClip;
     _set(null);
-    if (_playingClip) {
-      _playingClip = false;
+    if (wasClip) {
       try {
         await _clips.invokeMethod<void>('stop');
       } catch (_) {}
