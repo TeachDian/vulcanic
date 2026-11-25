@@ -335,7 +335,10 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
         if (!_placed) _showSurfaces = false;
         _placed = true;
       });
-      _controller.rotation = 0;
+      // A fresh placement faces the viewer again.
+      _controller
+        ..holdStill()
+        ..rotation = 0;
     } else {
       setState(() => _notice = 'No surface found there yet. Try the grid');
     }

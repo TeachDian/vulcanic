@@ -8,17 +8,23 @@ import 'obj_mesh.dart';
 
 /// The five modeled components of the volcano.
 enum VolcanoPart {
-  cone('cone', 'Volcanic cone'),
-  terrain('terrain', 'Rock layers'),
-  chamber('chamber', 'Magma chamber'),
-  conduit('conduit', 'Main conduit'),
-  lava('lava', 'Lava flow');
+  cone('cone', 'Volcanic cone', 106),
+  terrain('terrain', 'Rock layers', 160),
+  chamber('chamber', 'Magma chamber', 45),
+  conduit('conduit', 'Main conduit', 45),
+  lava('lava', 'Lava flow', 133);
 
-  const VolcanoPart(this.asset, this.label);
+  const VolcanoPart(this.asset, this.label, this.azimuthDegrees);
 
   /// File name (without extension) under assets/models/.
   final String asset;
   final String label;
+
+  /// Direction, around the vertical axis, from which the part is best
+  /// seen. Its label is anchored on that side and the view turns to it.
+  final double azimuthDegrees;
+
+  double get azimuth => azimuthDegrees * math.pi / 180;
 
   /// Two digit display number, "01" to "05".
   String get number => (index + 1).toString().padLeft(2, '0');
@@ -177,11 +183,11 @@ class VolcanoGeometry {
       blockDepth: depth,
       baseRadius: radius,
       anchors: [
-        polar(0.40, 106, peak * 0.50), // cone: front slope
-        polar(radius, 160, -depth * 0.55), // terrain: block wall
-        polar(0.30, 45, -depth * 0.60), // chamber: inside the notch
-        polar(0.05, 45, peak * 0.42), // conduit: inside the notch
-        polar(0.62, 133, peak * 0.12), // lava: on the flow
+        polar(0.40, VolcanoPart.cone.azimuthDegrees, peak * 0.50),
+        polar(radius, VolcanoPart.terrain.azimuthDegrees, -depth * 0.55),
+        polar(0.30, VolcanoPart.chamber.azimuthDegrees, -depth * 0.60),
+        polar(0.05, VolcanoPart.conduit.azimuthDegrees, peak * 0.42),
+        polar(0.62, VolcanoPart.lava.azimuthDegrees, peak * 0.12),
       ],
       anchorNormals: [
         polar(1, 106, 0.8)..normalize(),

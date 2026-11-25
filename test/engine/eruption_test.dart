@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:vulcanic/engine/eruption.dart';
+import 'package:vulcanic/engine/scene_frame.dart';
 import 'package:vulcanic/engine/volcano_controller.dart';
 import 'package:vulcanic/engine/volcano_geometry.dart';
 
@@ -121,6 +124,97 @@ void main() {
         c.tick(1 / 60, vent);
       }
       expect(c.highlighted, isNull);
+    });
+
+    /// Runs the controller until its eased motion has settled.
+    void settle(VolcanoController c) {
+      for (var i = 0; i < 240 && c.inMotion; i++) {
+        c.tick(1 / 60, vent);
+      }
+      expect(c.inMotion, isFalse);
+    }
+
+    /// The azimuth of the model that faces the viewer.
+    double facing(VolcanoController c) => kFrontAzimuth + c.rotation;
+
+    test('opening the cutaway turns and zooms to the opening', () {
+      final c = VolcanoController();
+      c.cutaway = true;
+      expect(c.inMotion, isTrue);
+      c.tick(1 / 60, vent);
+      expect(c.rotation, isNot(0), reason: 'eased, not instant');
+      expect(c.scale, lessThan(VolcanoController.openingZoom));
+      settle(c);
+      expect(facing(c), closeTo(VolcanoController.openingAzimuth, 1e-9));
+      expect(c.scale, VolcanoController.openingZoom);
+    });
+
+    test('closing the cutaway hands the view back', () {
+      final c = VolcanoController()
+        ..rotation = 0.4
+        ..scale = 0.8;
+      c.cutaway = true;
+      settle(c);
+      c.cutaway = false;
+      settle(c);
+      expect(c.rotation, closeTo(0.4, 1e-9));
+      expect(c.scale, closeTo(0.8, 1e-9));
+    });
+
+    test('a view the user moved is left where they put it', () {
+      final c = VolcanoController()..cutaway = true;
+      settle(c);
+      c
+        ..holdStill()
+        ..rotation = 2.0;
+      c.cutaway = false;
+      expect(c.inMotion, isFalse);
+      expect(c.rotation, 2.0);
+    });
+
+    test('never zooms out to focus, and takes the short way round', () {
+      final c = VolcanoController()
+        ..scale = 2
+        ..rotation = 6.0; // nearly a full turn
+      c.cutaway = true;
+      settle(c);
+      expect(c.scale, 2);
+      // From 6.0 the nearest equivalent of the opening is ahead, not back
+      // through zero.
+      expect((c.rotation - 6.0).abs(), lessThan(math.pi));
+      expect(
+        math.cos(facing(c) - VolcanoController.openingAzimuth),
+        closeTo(1, 1e-9),
+      );
+    });
+
+    test('selecting a part brings it round to the viewer', () {
+      final c = VolcanoController()..select(VolcanoPart.lava);
+      settle(c);
+      expect(facing(c), closeTo(VolcanoPart.lava.azimuth, 1e-9));
+      expect(c.scale, 1, reason: 'exterior parts do not zoom');
+
+      c.select(VolcanoPart.chamber);
+      settle(c);
+      expect(c.cutaway, isTrue);
+      expect(facing(c), closeTo(VolcanoController.openingAzimuth, 1e-9));
+      expect(c.scale, VolcanoController.openingZoom);
+    });
+
+    test('view buttons add up and stay within the zoom limits', () {
+      final c = VolcanoController()
+        ..turnBy(math.pi / 2)
+        ..turnBy(math.pi / 2);
+      for (var i = 0; i < 20; i++) {
+        c.zoomBy(1.25);
+      }
+      settle(c);
+      expect(c.rotation, closeTo(math.pi, 1e-9));
+      expect(c.scale, VolcanoController.maxScale);
+      c.resetTransform();
+      settle(c);
+      expect(c.scale, 1);
+      expect(math.cos(c.rotation), closeTo(1, 1e-9));
     });
 
     test('reset returns to the starting state', () {

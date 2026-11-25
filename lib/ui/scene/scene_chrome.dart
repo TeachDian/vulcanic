@@ -22,6 +22,7 @@ class SceneChrome extends StatefulWidget {
     this.trailing = const [],
     this.modeAction,
     this.banner,
+    this.viewActions = const [],
     this.showControls = true,
   });
 
@@ -41,6 +42,9 @@ class SceneChrome extends StatefulWidget {
 
   /// Guidance shown above the dock (e.g. "Move the phone slowly").
   final Widget? banner;
+
+  /// Mode-specific buttons added to the view rail.
+  final List<ViewAction> viewActions;
 
   /// False hides the rail and the dock, e.g. before the model is placed.
   final bool showControls;
@@ -134,6 +138,27 @@ class _SceneChromeState extends State<SceneChrome> {
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
                             colors: [Color(0xB3000000), Color(0x00000000)],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Zoom and viewpoint, tucked under the top bar where labels rarely go.
+                SafeArea(
+                  minimum: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 60),
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: showControls ? 1 : 0,
+                        child: IgnorePointer(
+                          ignoring: !showControls,
+                          child: ViewRail(
+                            controller: controller,
+                            extra: widget.viewActions,
                           ),
                         ),
                       ),

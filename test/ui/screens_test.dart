@@ -108,6 +108,20 @@ void main() {
     await advance(tester, 4);
     await save(tester, 'screen_explorer_erupting');
 
+    // The view rail steers without gestures.
+    for (final tip in ['Zoom in', 'Zoom out', 'Turn to the next side']) {
+      expect(find.byTooltip(tip), findsOneWidget);
+    }
+    await tester.tap(find.byTooltip('View from above'));
+    await advance(tester, 1);
+    expect(find.byTooltip('View from the side'), findsOneWidget);
+    await tester.tap(find.byTooltip('View from the side'));
+    await tester.tap(find.byTooltip('Turn to the next side'));
+    await advance(tester, 1.5);
+    await save(tester, 'screen_explorer_turned');
+    await tester.tap(find.bySemanticsLabel('Recentre'));
+    await advance(tester, 1.5);
+
     // The rail opens the detail card for a component.
     await tester.tap(find.text('03'));
     await advance(tester, 1);
