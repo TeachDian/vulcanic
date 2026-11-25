@@ -60,7 +60,11 @@ volcano stands on the marker and follows it as it moves. Cover the marker or
 take it out of view and the volcano fades out until it returns. Marker 02
 opens straight into the cutaway.
 
-**Everywhere.** Drag to turn, pinch to resize. *Erupt* plays a four-step
+**Everywhere.** Drag to turn, pinch to resize, or use the view buttons under
+the camera button: zoom in, zoom out and a quarter turn to the next side (the
+explorer adds a view from above). The view also moves by itself: opening the
+cutaway turns the opening to face you and zooms in, and selecting a component
+brings it round. *Erupt* plays a four-step
 sequence (magma rises, eruption, lava flows, cooling). *Inside* opens the
 cutaway. Tap a label or a number to open a component's card, and *Listen* to
 have it read aloud. The camera button saves a picture to the gallery.

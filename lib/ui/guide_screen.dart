@@ -82,6 +82,12 @@ const List<GuideSection> guideSections = [
       'Two fingers make it larger or smaller.',
     ),
     GuideStep(
+      Icons.rotate_90_degrees_cw_outlined,
+      'Or use the view buttons',
+      'Plus and minus zoom; the turn button shows the next side. The view '
+          'also turns by itself to whatever you open or select.',
+    ),
+    GuideStep(
       Icons.play_circle_outline_rounded,
       'Set it off',
       'Erupt plays the sequence. Tap again to pause it.',

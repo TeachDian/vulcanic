@@ -3,6 +3,11 @@ import 'dart:ui';
 
 import 'package:vector_math/vector_math_64.dart';
 
+/// The side of the volcano that faces the viewer when nothing has turned it:
+/// between the cutaway and the lava flow. An azimuth, measured from +X
+/// toward +Z.
+const double kFrontAzimuth = 78 * math.pi / 180;
+
 /// Everything the renderer needs to draw one frame: where the camera is,
 /// how it projects, and where the volcano stands.
 ///

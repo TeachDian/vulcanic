@@ -3,9 +3,7 @@ import 'dart:ui';
 
 import 'package:vector_math/vector_math_64.dart';
 
-/// The side of the volcano that should face the viewer when it is placed:
-/// between the cutaway and the lava flow. Matches the explorer's home view.
-const double kFrontAzimuth = 78 * math.pi / 180;
+import '../engine/scene_frame.dart';
 
 /// Rotation about the anchor's vertical axis that turns the volcano's front
 /// toward the camera.

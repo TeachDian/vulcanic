@@ -92,6 +92,7 @@ class _SceneGesturesState extends State<SceneGestures> {
 /// The standard AR interpretation of a drag: slide sideways to turn the
 /// model, pinch to resize it, twist to turn it.
 void applyDragToModel(VolcanoController controller, SceneDrag drag) {
+  controller.holdStill();
   if (drag.pointers == 1) {
     controller.rotation += drag.delta.dx * 0.011;
   } else {

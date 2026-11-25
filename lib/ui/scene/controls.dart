@@ -385,6 +385,74 @@ class _PhaseBar extends CustomPainter {
       old.controller != controller || old.step != step;
 }
 
+/// A button in the view rail.
+class ViewAction {
+  const ViewAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+}
+
+/// Buttons that move the view without a gesture: zoom in, zoom out, and a
+/// quarter turn to the next side. Each step is eased by the controller.
+class ViewRail extends StatelessWidget {
+  const ViewRail({super.key, required this.controller, this.extra = const []});
+
+  final VolcanoController controller;
+
+  /// Mode-specific buttons, shown after the standard three.
+  final List<ViewAction> extra;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = [
+      ViewAction(
+        icon: Icons.add_rounded,
+        tooltip: 'Zoom in',
+        onPressed: () => controller.zoomBy(1.25),
+      ),
+      ViewAction(
+        icon: Icons.remove_rounded,
+        tooltip: 'Zoom out',
+        onPressed: () => controller.zoomBy(1 / 1.25),
+      ),
+      ViewAction(
+        icon: Icons.rotate_90_degrees_cw_outlined,
+        tooltip: 'Turn to the next side',
+        onPressed: () => controller.turnBy(math.pi / 2),
+      ),
+      ...extra,
+    ];
+    return Glass(
+      radius: 24,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final action in actions)
+            SizedBox.square(
+              dimension: 46,
+              child: IconButton(
+                icon: Icon(action.icon, size: 21),
+                color: Palette.bone,
+                tooltip: action.tooltip,
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  action.onPressed();
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Numbered shortcuts to the five components, matching the labels on the
 /// model.
 class PartRail extends StatelessWidget {
