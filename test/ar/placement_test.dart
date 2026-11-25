@@ -61,7 +61,7 @@ void main() {
       final model = placeVolcano(
         anchor: anchor,
         width: 2,
-        blockDepth: 0,
+        lift: 0,
         rotation: yaw,
       );
       final front = model.transform3(
@@ -77,7 +77,7 @@ void main() {
     final model = placeVolcano(
       anchor: Matrix4.translation(Vector3(0, 1, 0)),
       width: 0.4,
-      blockDepth: 0.56,
+      lift: 0.56,
     );
     // The bottom of the block (y = -0.56 in model space) sits on the anchor.
     expect(model.transform3(Vector3(0, -0.56, 0)).y, closeTo(1, 1e-9));

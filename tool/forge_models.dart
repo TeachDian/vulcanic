@@ -14,7 +14,7 @@
 import 'dart:io';
 import 'dart:math';
 
-const int kSegments = 48; // around the axis; a multiple of 4
+const int kSegments = 72; // around the axis; a multiple of 4
 const double kBaseRadius = 1.0;
 const double kConeRadius = 0.92;
 const double kRimRadius = 0.13;
@@ -22,6 +22,10 @@ const double kPeak = 0.78;
 const double kCraterFloorY = 0.68;
 const double kCraterFloorRadius = 0.07;
 const double kBlockDepth = 0.56;
+
+/// Thickness of the plinth the volcano stands on. The rock below it is
+/// only shown by the cutaway.
+const double kPlinthDepth = 0.09;
 const double kLavaAzimuth = 135 * pi / 180;
 
 /// Inset that keeps section faces just inside the quadrant that owns them.
@@ -199,17 +203,25 @@ class ObjBuilder {
 
 double _theta(int j) => 2 * pi * j / kSegments;
 
+/// Ridges (positive) and gullies (negative) running down the cone.
+double _gullies(double theta) =>
+    0.6 * sin(5 * theta + 0.7) +
+    0.4 * sin(11 * theta + 2.1) +
+    0.3 * sin(17 * theta + 4.0);
+
+double _smooth(double a, double b, double x) {
+  final t = ((x - a) / (b - a)).clamp(0.0, 1.0);
+  return t * t * (3 - 2 * t);
+}
+
 /// Point on the cone's outer slope. [u] runs 0 (base) to 1 (crater rim).
 V3 coneSurface(double u, double theta) {
   u = u.clamp(0.0, 1.0);
   final r0 = kConeRadius - (kConeRadius - kRimRadius) * u;
   // Radial gullies, strongest mid-slope.
-  final gullies =
-      0.6 * sin(5 * theta + 0.7) +
-      0.4 * sin(11 * theta + 2.1) +
-      0.3 * sin(17 * theta + 4.0);
+  final gullies = _gullies(theta);
   final mid = sin(pi * u);
-  final r = r0 * (1 + 0.05 * gullies * mid);
+  final r = r0 * (1 + 0.068 * gullies * mid);
   var y = kPeak * pow(u, 1.75).toDouble();
   y += 0.018 * sin(7 * theta + 9 * u) * mid;
   // Uneven rim, breached on the side the lava spills from.
@@ -228,12 +240,12 @@ V3 _snap(V3 p, int j, int segments) {
   return k.isEven ? V3(p.x, p.y, 0) : V3(0, p.y, p.z);
 }
 
-const int _coneRings = 14;
+const int _coneRings = 24;
 double _ringU(int i) => pow(i / _coneRings, 0.85).toDouble();
 
 /// Horizontal rock strata, top to bottom: (bottom y, colour).
 final List<(double, Rgb)> _strata = [
-  (-0.05, Rgb.hex(0x6b4f3a)), // soil
+  (-kPlinthDepth, Rgb.hex(0x5a4a3e)), // soil: the plinth
   (-0.19, Rgb.hex(0x86705b)), // tuff
   (-0.34, Rgb.hex(0x5c4d45)), // basalt
   (-0.45, Rgb.hex(0x77634f)), // sandstone
@@ -242,7 +254,7 @@ final List<(double, Rgb)> _strata = [
 
 /// Gentle waviness shared by the block wall and its section faces.
 double _strataWave(double x, double z, int band) =>
-    0.014 * sin(2.3 * x + 1.7 * z + band * 1.3);
+    band == 0 ? 0 : 0.014 * sin(2.3 * x + 1.7 * z + band * 1.3);
 
 // ---------------------------------------------------------------------------
 // 01 - Volcanic cone
@@ -252,16 +264,28 @@ ObjBuilder forgeCone() {
   final b = ObjBuilder(
     'cone',
     'component 01: volcanic cone and crater',
-    smooth: false,
+    smooth: true,
   );
-  final slope = <(double, Rgb)>[
-    (0.00, Rgb.hex(0x55733b)),
-    (0.20, Rgb.hex(0x6f6f3f)),
-    (0.45, Rgb.hex(0x82603f)),
-    (0.70, Rgb.hex(0x64504a)),
-    (0.88, Rgb.hex(0x453a3b)),
-    (1.00, Rgb.hex(0x2f2428)),
-  ];
+  // Colour follows the ground, not the ring: what grows or lies on a slope
+  // depends on how steep and how high it is.
+  final vegetation = Rgb.hex(0x5f7d46);
+  final scree = Rgb.hex(0x8b7556);
+  final rock = Rgb.hex(0x705b4e);
+  final ash = Rgb.hex(0x4a4244);
+  final scorch = Rgb.hex(0x2a2126);
+  Rgb ground(double u, double theta) {
+    // Steepness of the profile, 0 on the apron to 1 under the rim.
+    final steep = pow(u, 0.75).toDouble();
+    var c = Rgb.lerp(vegetation, scree, _smooth(0.10, 0.36, u));
+    c = Rgb.lerp(c, rock, _smooth(0.30, 0.70, steep));
+    c = Rgb.lerp(c, ash, _smooth(0.62, 0.90, u));
+    c = Rgb.lerp(c, scorch, _smooth(0.90, 1.0, u));
+    // Baked contact shade: darker in the gullies and where the cone meets
+    // the ground, lighter on the ridges.
+    final gully = _gullies(theta) * sin(pi * u);
+    final contact = 0.70 + 0.30 * _smooth(0.0, 0.18, u);
+    return c.scale((1 + 0.27 * gully) * contact);
+  }
 
   // Outer slope: rings from the base up to the rim.
   final rings = <List<int>>[];
@@ -270,9 +294,12 @@ ObjBuilder forgeCone() {
     final ring = <int>[];
     for (var j = 0; j < kSegments; j++) {
       final p = _snap(coneSurface(u, _theta(j)), j, kSegments);
-      final shade = 1 + 0.07 * hash(i, j);
+      final shade = 1 + 0.025 * hash(i, j);
       ring.add(
-        b.vertex(i == 0 ? V3(p.x, 0, p.z) : p, ramp(slope, u).scale(shade)),
+        b.vertex(
+          i == 0 ? V3(p.x, 0, p.z) : p,
+          ground(u, _theta(j)).scale(shade),
+        ),
       );
     }
     rings.add(ring);
@@ -390,7 +417,8 @@ ObjBuilder forgeTerrain() {
     'component 02: ground and rock layers',
     smooth: false,
   );
-  final grass = Rgb.hex(0x5c7a3c);
+  // The same vegetation as the foot of the cone, shaded where they meet.
+  final grass = Rgb.hex(0x5f7d46);
 
   // Apron of ground between the foot of the cone and the edge of the block.
   final inner = <int>[], outer = <int>[];
@@ -398,12 +426,12 @@ ObjBuilder forgeTerrain() {
     final t = _theta(j);
     final foot = _snap(coneSurface(0, t), j, kSegments);
     inner.add(
-      b.vertex(V3(foot.x, 0, foot.z), grass.scale(1 + 0.06 * hash(3, j))),
+      b.vertex(V3(foot.x, 0, foot.z), grass.scale(0.70 + 0.02 * hash(3, j))),
     );
     outer.add(
       b.vertex(
         _snap(V3(kBaseRadius * cos(t), 0, kBaseRadius * sin(t)), j, kSegments),
-        grass.scale(0.94 + 0.06 * hash(4, j)),
+        grass.scale(0.95 + 0.02 * hash(4, j)),
       ),
     );
   }
@@ -430,7 +458,7 @@ ObjBuilder forgeTerrain() {
       final x = kBaseRadius * cos(t), z = kBaseRadius * sin(t);
       final yTop = band == 0 ? 0.0 : top + _strataWave(x, z, band - 1);
       final yBottom = last ? bottom : bottom + _strataWave(x, z, band);
-      final shade = 1 + 0.05 * hash(20 + band, j);
+      final shade = 1 + 0.02 * hash(20 + band, j);
       upper.add(
         b.vertex(
           _snap(V3(x, yTop, z), j, kSegments),
@@ -452,7 +480,8 @@ ObjBuilder forgeTerrain() {
         lower[j2],
         upper[j2],
         upper[j],
-        'terrain_rock',
+        // Only the plinth shows from outside; the rest waits for the cutaway.
+        band == 0 ? 'terrain_rock' : 'terrain_deep',
         V3(cos(mid), 0, sin(mid)),
       );
     }
@@ -481,7 +510,7 @@ ObjBuilder forgeTerrain() {
       bottomRing[j],
       bottomRing[(j + 1) % kSegments],
       bottomCenter,
-      'terrain_rock',
+      'terrain_deep',
       const V3(0, -1, 0),
     );
   }
@@ -718,6 +747,8 @@ newmtl cone_section
 Kd 0.42 0.35 0.30
 newmtl terrain_rock
 Kd 0.40 0.34 0.28
+newmtl terrain_deep
+Kd 0.36 0.31 0.27
 newmtl terrain_section
 Kd 0.46 0.39 0.32
 newmtl magma

@@ -112,15 +112,34 @@ class SceneRenderer {
     final camera = inverse.getTranslation(); // camera in model space
 
     // Key light, fixed relative to the viewer so the lit side faces them.
-    final light = (frame.light ?? Vector3(-0.42, 0.74, 0.52)).normalized();
+    // Three lights, all fixed relative to the viewer so the model always
+    // presents well: a warm key from the upper left, a cool fill from the
+    // right that keeps the shadow side from going flat, and a rim that
+    // picks out the silhouette against a dark table or backdrop.
     final toModel = mv.getRotation()..transpose();
-    final l = toModel.transformed(light)..normalize();
-    final lx = l.x, ly = l.y, lz = l.z;
+    final key = toModel.transformed(
+      (frame.light ?? Vector3(-0.42, 0.74, 0.52)).normalized(),
+    )..normalize();
+    final fill = toModel.transformed(Vector3(0.72, 0.12, 0.42).normalized())
+      ..normalize();
+    final eye = camera.normalized();
+    final lx = key.x, ly = key.y, lz = key.z;
+    final fx = fill.x, fy = fill.y, fz = fill.z;
+    final ex = eye.x, ey = eye.y, ez = eye.z;
 
     final hw = size.width / 2, hh = size.height / 2;
     final m = mvp.storage;
 
-    if (frame.shadow) _paintShadow(canvas, m, hw, hh, frame.opacity);
+    if (frame.shadow) {
+      _paintShadow(
+        canvas,
+        m,
+        hw,
+        hh,
+        frame.opacity,
+        g.restDepth(state.cutawayT),
+      );
+    }
 
     // 1. Project every corner.
     final p = g.positions;
@@ -160,6 +179,9 @@ class SceneRenderer {
       double a;
       if (role == FaceRole.section.index) {
         a = cut;
+      } else if (role == FaceRole.deep.index) {
+        // Rock under the plinth appears with the cutaway.
+        a = quadrant == notch ? 0 : cut;
       } else if (role == FaceRole.magma.index ||
           role == FaceRole.conduit.index) {
         a = quadrant == notch ? cut : 0;
@@ -221,16 +243,23 @@ class SceneRenderer {
         final i = t * 3 + c;
         final j = i * 3;
         var r = col[j], gr = col[j + 1], b = col[j + 2];
-        final ny = nrm[j + 1];
-        var ndl = nrm[j] * lx + ny * ly + nrm[j + 2] * lz;
+        final nx = nrm[j], ny = nrm[j + 1], nz = nrm[j + 2];
+        var ndl = nx * lx + ny * ly + nz * lz;
         if (ndl < 0) ndl = 0;
-        final lit = (0.36 + 0.92 * ndl + 0.10 * (ny * 0.5 + 0.5)) * exposure;
+        var ndf = nx * fx + ny * fy + nz * fz;
+        if (ndf < 0) ndf = 0;
+        var facing = nx * ex + ny * ey + nz * ez;
+        if (facing < 0) facing = 0;
+        final edge = (1 - facing) * (1 - facing) * (1 - facing);
+        // Overall brightness, used where a surface is tinted as a whole.
+        final lit = (0.30 + 0.86 * ndl + 0.22 * ndf + 0.16 * edge) * exposure;
 
         switch (role) {
-          case 0: // rock
-            r *= lit;
-            gr *= lit;
-            b *= lit;
+          case 0 || 6: // rock, and the rock under the plinth
+            // Warm key, cool fill, cool rim.
+            r *= (0.27 + 0.92 * ndl + 0.12 * ndf + 0.13 * edge) * exposure;
+            gr *= (0.29 + 0.86 * ndl + 0.17 * ndf + 0.16 * edge) * exposure;
+            b *= (0.34 + 0.74 * ndl + 0.27 * ndf + 0.22 * edge) * exposure;
           case 1: // section
             final s = (0.80 + 0.28 * ndl) * exposure;
             r *= s;
@@ -259,18 +288,26 @@ class SceneRenderer {
             b *= (0.22 + (0.80 + shimmer) * hot) * v;
           default: // lava
             final a = aux[i];
-            final hot =
-                heat * (1 - smoothstep(reveal - 0.03, reveal + 0.03, a));
-            final d = (a - reveal) / 0.05;
-            final front = reveal < 0.995 ? heat * math.exp(-d * d) : 0.0;
-            final flow = 0.92 + 0.08 * math.sin(a * 42 - clock * 5);
+            // How much of this point is fresh lava: all of it behind the
+            // advancing front, none ahead of it.
+            final fresh = 1 - smoothstep(reveal - 0.03, reveal + 0.03, a);
+            final d = (a - reveal) / 0.07;
+            final front = reveal < 0.995 ? math.exp(-d * d) : 0.0;
+            // Temperature, 0 (crust) to 1 (about 1,250 C). The front is the
+            // hottest part, the middle of the flow hotter than its edges
+            // (the model's own colour says how central a vertex is), and a
+            // slow shimmer runs downhill.
+            final central = gr;
+            final shimmer = 0.04 * math.sin(a * 42 - clock * 5);
+            final t =
+                heat * fresh * (0.50 + 0.26 * central + 0.30 * front + shimmer);
             // Old flow: dark crust that still takes the light.
-            final cr = 0.19 * lit + 0.05 * r;
-            final cg = 0.14 * lit + 0.02 * gr;
-            final cb = 0.13 * lit;
-            r = cr + (r * flow - cr) * hot + 0.25 * front;
-            gr = cg + (gr * flow - cg) * hot + 0.20 * front;
-            b = cb + (b * flow - cb) * hot + 0.10 * front;
+            final cr = 0.17 * lit, cg = 0.125 * lit, cb = 0.12 * lit;
+            final glowR = _heatR(t), glowG = _heatG(t), glowB = _heatB(t);
+            final w = smoothstep(0.0, 0.16, t);
+            r = cr + (glowR - cr) * w;
+            gr = cg + (glowG - cg) * w;
+            b = cb + (glowB - cb) * w;
         }
 
         if (selection > 0) {
@@ -322,6 +359,28 @@ class SceneRenderer {
     }
   }
 
+  // Incandescence: the colour of rock by temperature, from a dull red near
+  // 600 C through orange to pale yellow near 1,250 C. Input 0..1.
+  static const List<double> _heatAt = [0.0, 0.22, 0.45, 0.68, 0.86, 1.0];
+  static const List<double> _heatRed = [0.16, 0.42, 0.78, 0.95, 1.0, 1.0];
+  static const List<double> _heatGreen = [0.11, 0.08, 0.20, 0.42, 0.70, 0.90];
+  static const List<double> _heatBlue = [0.10, 0.06, 0.10, 0.11, 0.29, 0.66];
+
+  static double _ramp(List<double> values, double t) {
+    if (t <= 0) return values.first;
+    for (var i = 1; i < _heatAt.length; i++) {
+      if (t <= _heatAt[i]) {
+        final u = (t - _heatAt[i - 1]) / (_heatAt[i] - _heatAt[i - 1]);
+        return values[i - 1] + (values[i] - values[i - 1]) * u;
+      }
+    }
+    return values.last;
+  }
+
+  static double _heatR(double t) => _ramp(_heatRed, t);
+  static double _heatG(double t) => _ramp(_heatGreen, t);
+  static double _heatB(double t) => _ramp(_heatBlue, t);
+
   static int _channel(double v) =>
       v <= 0 ? 0 : (v >= 1 ? 255 : (v * 255).toInt());
 
@@ -349,6 +408,7 @@ class SceneRenderer {
     double hw,
     double hh,
     double opacity,
+    double depth,
   ) {
     final g = geometry;
     final path = Path();
@@ -363,7 +423,7 @@ class SceneRenderer {
         hw,
         hh,
         radius * math.cos(a),
-        -g.blockDepth,
+        -depth,
         radius * math.sin(a),
       );
       if (s == null) continue;

@@ -358,7 +358,7 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
       model: placeVolcano(
         anchor: anchor,
         width: _width,
-        blockDepth: widget.geometry.blockDepth,
+        lift: widget.geometry.restDepth(_controller.cutawayT),
         rotation: _yaw + _controller.rotation,
         scale: _controller.scale,
       ),
@@ -576,7 +576,7 @@ class _ScreenSurfaceState extends State<_ScreenSurface> {
       model: placeVolcano(
         anchor: anchor,
         width: _width,
-        blockDepth: widget.geometry.blockDepth,
+        lift: widget.geometry.restDepth(_controller.cutawayT),
         rotation: facingYaw(anchor, view) + _controller.rotation,
         scale: _controller.scale,
       ),

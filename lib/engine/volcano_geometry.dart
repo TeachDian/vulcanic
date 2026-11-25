@@ -52,6 +52,9 @@ enum FaceRole {
 
   /// Lava flow, advances from the crater outward.
   lava,
+
+  /// Rock below the plinth, shown only while the cutaway is open.
+  deep,
 }
 
 /// The assembled volcano: one triangle soup with per-triangle metadata.
@@ -66,6 +69,7 @@ class VolcanoGeometry {
     required this.quadrants,
     required this.vent,
     required this.blockDepth,
+    required this.plinthDepth,
     required this.baseRadius,
     required this.anchors,
     required this.anchorNormals,
@@ -89,6 +93,15 @@ class VolcanoGeometry {
 
   /// How far the rock block extends below the ground surface (y = 0).
   final double blockDepth;
+
+  /// Thickness of the plinth, the part of the block that always shows.
+  final double plinthDepth;
+
+  /// How far the model reaches below ground level while the cutaway is
+  /// [cutaway] open (0..1): the plinth alone, or the whole block. Standing
+  /// the model on a surface means lifting it by this much.
+  double restDepth(double cutaway) =>
+      plinthDepth + (blockDepth - plinthDepth) * cutaway;
   final double baseRadius;
 
   /// Label anchor per part and the direction it faces, in model space.
@@ -122,7 +135,7 @@ class VolcanoGeometry {
     final roles = Uint8List(total);
     final quadrants = Uint8List(total);
 
-    var peak = 0.0, depth = 0.0, radius = 0.0;
+    var peak = 0.0, depth = 0.0, radius = 0.0, plinth = 0.0;
     var t = 0;
     for (final part in VolcanoPart.values) {
       final mesh = meshes[part]!;
@@ -149,7 +162,14 @@ class VolcanoGeometry {
 
       for (var k = 0; k < mesh.triangleCount; k++, t++) {
         parts[t] = part.index;
-        roles[t] = _roleFor(part, mesh.materialNames[mesh.materials[k]]).index;
+        final role = _roleFor(part, mesh.materialNames[mesh.materials[k]]);
+        roles[t] = role.index;
+        if (part == VolcanoPart.terrain && role == FaceRole.rock) {
+          // The plinth is the exterior rock that is always visible.
+          for (var c = 0; c < 3; c++) {
+            plinth = math.max(plinth, -p[(k * 3 + c) * 3 + 1]);
+          }
+        }
         var cx = 0.0, cz = 0.0;
         for (var c = 0; c < 3; c++) {
           final i = (k * 3 + c) * 3;
@@ -181,6 +201,7 @@ class VolcanoGeometry {
       quadrants: quadrants,
       vent: Vector3(0, peak - 0.07, 0),
       blockDepth: depth,
+      plinthDepth: plinth > 0 ? plinth : depth,
       baseRadius: radius,
       anchors: [
         polar(0.40, VolcanoPart.cone.azimuthDegrees, peak * 0.50),
@@ -201,6 +222,7 @@ class VolcanoGeometry {
 
   static FaceRole _roleFor(VolcanoPart part, String material) {
     if (material.contains('section')) return FaceRole.section;
+    if (material.contains('deep')) return FaceRole.deep;
     if (material.contains('crater')) return FaceRole.crater;
     return switch (part) {
       VolcanoPart.cone || VolcanoPart.terrain => FaceRole.rock,
