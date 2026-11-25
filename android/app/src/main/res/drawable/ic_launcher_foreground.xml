@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A volcano with a lava flow, inside the 66dp safe zone of a 108dp icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Plume -->
+    <path
+        android:fillColor="#FFB347"
+        android:pathData="M54,25 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
+    <!-- Cone -->
+    <path
+        android:fillColor="#F4F1EC"
+        android:pathData="M27,76 C38,72 44,58 48.5,36 L59.5,36 C64,58 70,72 81,76 Z" />
+    <!-- Lava -->
+    <path
+        android:fillColor="#FF6A3D"
+        android:pathData="M48.5,36 L59.5,36 C60.5,41 61.5,45.5 62.8,49.6 C58.5,51 57.5,55 55.5,60 C54,64 51,66 47.5,64.5 C50,58 49,52 45.6,48.5 C46.8,44.6 47.7,40.4 48.5,36 Z" />
+</vector>

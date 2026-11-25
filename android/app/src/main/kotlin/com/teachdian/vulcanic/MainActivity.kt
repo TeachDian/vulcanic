@@ -1,15 +1,19 @@
 package com.teachdian.vulcanic
 
 import com.teachdian.vulcanic.ar.ArBridge
+import com.teachdian.vulcanic.media.MediaBridge
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterActivity() {
     private var ar: ArBridge? = null
+    private var media: MediaBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        ar = ArBridge(this, flutterEngine.dartExecutor.binaryMessenger, flutterEngine.renderer)
+        val messenger = flutterEngine.dartExecutor.binaryMessenger
+        ar = ArBridge(this, messenger, flutterEngine.renderer)
+        media = MediaBridge(this, messenger)
     }
 
     override fun onRequestPermissionsResult(
@@ -25,6 +29,8 @@ class MainActivity : FlutterActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         ar?.dispose()
         ar = null
+        media?.dispose()
+        media = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }
