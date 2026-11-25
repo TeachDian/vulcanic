@@ -1,0 +1,20 @@
+# Vulcanic - shared materials. Vertex colours carry the detail.
+newmtl cone_rock
+Kd 0.38 0.34 0.28
+newmtl cone_crater
+Kd 0.15 0.11 0.10
+newmtl cone_section
+Kd 0.42 0.35 0.30
+newmtl terrain_rock
+Kd 0.40 0.34 0.28
+newmtl terrain_section
+Kd 0.46 0.39 0.32
+newmtl magma
+Kd 0.95 0.42 0.11
+Ke 0.80 0.30 0.05
+newmtl conduit
+Kd 1.00 0.48 0.12
+Ke 0.80 0.30 0.05
+newmtl lava
+Kd 1.00 0.48 0.12
+Ke 0.90 0.35 0.05
