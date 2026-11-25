@@ -15,6 +15,18 @@ enum ArAvailability {
   unsupported,
 }
 
+/// Outcome of asking for Google Play Services for AR to be installed.
+enum ArInstall {
+  /// Already present and current.
+  installed,
+
+  /// The install prompt is showing; check again when the app resumes.
+  requested,
+
+  /// The user said no, or the install is not possible.
+  declined,
+}
+
 /// Whether the app may use the camera.
 enum CameraAccess {
   granted,
@@ -157,11 +169,24 @@ class ArSession {
   int? textureId;
   StreamSubscription<dynamic>? _subscription;
 
-  /// Asks ARCore whether this phone is supported. The first answer can be
-  /// "still checking", so this polls for a moment before giving up.
-  static Future<ArAvailability> availability() async {
+  static Future<ArAvailability>? _warmUp;
+
+  /// Starts the support check early (from the home screen), so the answer
+  /// is usually ready by the time AR is wanted. Safe to call repeatedly.
+  static Future<ArAvailability> warmUp() => _warmUp ??= availability();
+
+  /// Asks ARCore whether this phone is supported.
+  ///
+  /// ARCore may need to ask Google's servers about the device the first
+  /// time, and answers "still checking" until it knows. This keeps asking
+  /// for up to [patience] before concluding that the phone cannot do AR,
+  /// so a capable phone is not written off just because the check was slow.
+  static Future<ArAvailability> availability({
+    Duration patience = const Duration(seconds: 8),
+  }) async {
+    final deadline = DateTime.now().add(patience);
     try {
-      for (var attempt = 0; attempt < 15; attempt++) {
+      while (true) {
         final answer = await _methods.invokeMethod<String>('availability');
         switch (answer) {
           case 'supported':
@@ -171,18 +196,28 @@ class ArSession {
           case 'unsupported':
             return ArAvailability.unsupported;
         }
-        await Future<void>.delayed(const Duration(milliseconds: 200));
+        if (DateTime.now().isAfter(deadline)) break;
+        await Future<void>.delayed(const Duration(milliseconds: 250));
       }
     } on PlatformException catch (_) {
     } on MissingPluginException catch (_) {}
     return ArAvailability.unsupported;
   }
 
-  /// Opens the store page for Google Play Services for AR.
-  static Future<void> requestInstall() async {
+  /// Asks ARCore to install or update Google Play Services for AR, showing
+  /// its own prompt. The answer says what happened.
+  static Future<ArInstall> requestInstall() async {
     try {
-      await _methods.invokeMethod<String>('install');
-    } on PlatformException catch (_) {}
+      return switch (await _methods.invokeMethod<String>('install')) {
+        'installed' => ArInstall.installed,
+        'requested' => ArInstall.requested,
+        _ => ArInstall.declined,
+      };
+    } on PlatformException catch (_) {
+      return ArInstall.declined;
+    } on MissingPluginException catch (_) {
+      return ArInstall.declined;
+    }
   }
 
   /// Starts tracking and rendering the camera at [width] x [height] pixels.
