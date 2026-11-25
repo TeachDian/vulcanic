@@ -1,0 +1,121 @@
+import 'package:flutter/material.dart';
+
+import '../ar/ar_session.dart';
+import 'scene/controls.dart';
+import 'theme.dart';
+
+/// Shows [builder]'s content once the camera may be used, and a request for
+/// permission until then.
+class CameraGate extends StatefulWidget {
+  const CameraGate({super.key, required this.builder});
+  final WidgetBuilder builder;
+
+  @override
+  State<CameraGate> createState() => _CameraGateState();
+}
+
+class _CameraGateState extends State<CameraGate> with WidgetsBindingObserver {
+  CameraAccess? _access;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _check(request: true);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Coming back from the settings page.
+    if (state == AppLifecycleState.resumed &&
+        _access != null &&
+        _access != CameraAccess.granted) {
+      _check(request: false);
+    }
+  }
+
+  Future<void> _check({required bool request}) async {
+    final access = await CameraPermission.check(request: request);
+    if (mounted) setState(() => _access = access);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final access = _access;
+    if (access == CameraAccess.granted) return widget.builder(context);
+    return Scaffold(
+      body: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GlassIconButton(
+              icon: Icons.arrow_back_rounded,
+              tooltip: 'Back',
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+            if (access != null) ...[
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Palette.ember.withValues(alpha: 0.14),
+                      ),
+                      child: const Icon(
+                        Icons.photo_camera_rounded,
+                        color: Palette.ember,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Text('The camera\nis the stage.', style: AppText.display),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Vulcanic shows the volcano on top of what your camera '
+                      'sees. Nothing is recorded or sent anywhere.',
+                      style: AppText.body.copyWith(fontSize: 16),
+                    ),
+                    const SizedBox(height: 28),
+                    FilledButton(
+                      onPressed: access == CameraAccess.blocked
+                          ? CameraPermission.openSettings
+                          : () => _check(request: true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Palette.ember,
+                        foregroundColor: const Color(0xFF1A0E08),
+                        minimumSize: const Size.fromHeight(58),
+                        textStyle: AppText.title,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(29),
+                        ),
+                      ),
+                      child: Text(
+                        access == CameraAccess.blocked
+                            ? 'Open settings'
+                            : 'Allow camera',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(flex: 2),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

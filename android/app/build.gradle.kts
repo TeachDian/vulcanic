@@ -47,3 +47,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // ARCore: motion tracking, plane detection and hit testing.
+    implementation("com.google.ar:core:1.57.0")
+}

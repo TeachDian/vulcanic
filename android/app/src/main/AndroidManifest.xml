@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- A camera is needed; ARCore is not. Phones without it fall back to
+         screen placement and the printed marker. -->
+    <uses-feature android:name="android.hardware.camera" android:required="true" />
+    <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
+
     <application
         android:label="Vulcanic"
         android:name="${applicationName}"
@@ -28,6 +34,10 @@
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <!-- "optional": installable on phones without ARCore support. -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="optional" />
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

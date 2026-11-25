@@ -11,6 +11,7 @@ import '../engine/volcano_view.dart';
 import 'explorer_screen.dart';
 import 'guide_screen.dart';
 import 'scene/controls.dart';
+import 'surface_screen.dart';
 import 'theme.dart';
 
 /// The main interface: a live volcano and the ways to view it.
@@ -105,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: AppText.body.copyWith(fontSize: 16),
                 ),
                 const SizedBox(height: 24),
-                const Row(
+                Row(
                   spacing: 12,
                   children: [
                     Expanded(
@@ -113,11 +114,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: 'Surface',
                         caption: 'On a table or floor',
                         glyph: _Glyph.surface,
-                        tag: 'Next',
-                        onTap: null,
+                        onTap: () =>
+                            _open(SurfaceScreen(geometry: widget.geometry)),
                       ),
                     ),
-                    Expanded(
+                    const Expanded(
                       child: _ModeCard(
                         title: 'Marker',
                         caption: 'On the printed card',
