@@ -29,6 +29,16 @@ Marker works exactly as it does everywhere else.
   <img src="docs/screenshots/markers.png" width="24%" alt="Marker gallery">
 </p>
 
+## Documentation
+
+[`docs/Vulcanic-Documentation.pdf`](docs/Vulcanic-Documentation.pdf) is the
+project write-up: introduction, system design with architecture and workflow
+diagrams, how both tracking methods are implemented, the 3D components, and
+a test plan. The device test results and device screenshots in it are left
+blank, to be filled in from a real phone. It is produced by
+`tool/build_documentation.py` (Python with `reportlab`), run after
+`flutter test` so the screenshots it embeds are current.
+
 ## Run it
 
 Requires Flutter 3.47+ and a phone on Android 13 (API 33) or newer.
