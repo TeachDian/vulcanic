@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -40,6 +41,10 @@ class _SurfaceScreenState extends State<SurfaceScreen>
   /// Explains why the app is not using surface tracking, when it is not.
   String? _notice;
 
+  /// The install prompt for AR services is offered once per visit.
+  bool _offeredInstall = false;
+  bool _waitingForInstall = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,15 +62,46 @@ class _SurfaceScreenState extends State<SurfaceScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Back from the store after installing AR services.
     if (state == AppLifecycleState.resumed &&
-        _availability == ArAvailability.installable) {
+        (_waitingForInstall || _availability == ArAvailability.installable)) {
       _checkAvailability(initial: false);
     }
   }
 
+  /// Surface tracking is always the first choice. The fallback is used
+  /// only when the phone cannot do it, or the user turns it down.
   Future<void> _checkAvailability({required bool initial}) async {
-    final availability = await ArSession.availability();
+    var availability = initial
+        ? await ArSession.warmUp()
+        : await ArSession.availability();
+    // The early answer may be out of date (AR services installed since) or
+    // a check that timed out. Anything short of "supported" is asked again;
+    // a settled answer comes back at once.
+    if (initial && availability != ArAvailability.supported) {
+      availability = await ArSession.availability();
+    }
     if (!mounted) return;
+
+    // Capable, but Google's AR services are missing or out of date: offer
+    // to install them before settling for less.
+    if (availability == ArAvailability.installable && !_offeredInstall) {
+      _offeredInstall = true;
+      final install = await ArSession.requestInstall();
+      if (!mounted) return;
+      switch (install) {
+        case ArInstall.installed:
+          availability = ArAvailability.supported;
+        case ArInstall.requested:
+          // The store prompt is up. The answer comes when the app resumes.
+          setState(() => _availability = null);
+          _waitingForInstall = true;
+          return;
+        case ArInstall.declined:
+          break;
+      }
+    }
+
     setState(() {
+      _waitingForInstall = false;
       _availability = availability;
       if (initial || availability == ArAvailability.supported) {
         _useAr = availability == ArAvailability.supported;
@@ -93,13 +129,14 @@ class _SurfaceScreenState extends State<SurfaceScreen>
     return CameraGate(
       builder: (context) {
         final availability = _availability;
-        if (availability == null) {
-          return const Scaffold(backgroundColor: Colors.black);
-        }
+        if (availability == null) return const _CheckingSupport();
         if (_useAr) {
           return _TrackedSurface(
             geometry: widget.geometry,
             onSwitch: () => _fallBack('Tap anywhere to move the volcano'),
+            onGiveUp: () => _fallBack(
+              'No surface found. Tap anywhere to place the volcano',
+            ),
             onFailed: () => _fallBack(
               'Surface tracking could not start. Tap to place instead',
             ),
@@ -109,7 +146,10 @@ class _SurfaceScreenState extends State<SurfaceScreen>
           geometry: widget.geometry,
           notice: _notice,
           onInstall: availability == ArAvailability.installable
-              ? ArSession.requestInstall
+              ? () {
+                  _offeredInstall = false;
+                  _checkAvailability(initial: false);
+                }
               : null,
           onSwitch: availability == ArAvailability.supported
               ? () => setState(() => _useAr = true)
@@ -130,11 +170,17 @@ class _TrackedSurface extends StatefulWidget {
   const _TrackedSurface({
     required this.geometry,
     required this.onSwitch,
+    required this.onGiveUp,
     required this.onFailed,
   });
 
   final VolcanoGeometry geometry;
+
+  /// The user chose screen placement from the top bar.
   final VoidCallback onSwitch;
+
+  /// The user gave up waiting for a surface to be found.
+  final VoidCallback onGiveUp;
   final VoidCallback onFailed;
 
   @override
@@ -149,6 +195,9 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
   /// `ArSessionRunner.RETICLE_Y`.
   static const double _reticleFraction = 0.46;
 
+  /// How long to look for a surface before offering the fallback.
+  static const Duration _searchPatience = Duration(seconds: 20);
+
   late final SceneRenderer _renderer = SceneRenderer(widget.geometry);
   final VolcanoController _controller = VolcanoController();
   final ArSession _session = ArSession();
@@ -159,6 +208,10 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
   bool _placed = false;
   bool _showSurfaces = true;
   String? _notice;
+
+  /// Set when no surface has been found for a while.
+  bool _searchIsSlow = false;
+  Timer? _searchTimer;
 
   Size? _textureSize;
   double _textureScale = 1;
@@ -174,10 +227,16 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
     super.initState();
     _session.frame.addListener(_onFrame);
     _session.failure.addListener(_onFailure);
+    _searchTimer = Timer(_searchPatience, () {
+      if (mounted && !_placed && _tracking != _Tracking.ready) {
+        setState(() => _searchIsSlow = true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _searchTimer?.cancel();
     _session.frame.removeListener(_onFrame);
     _session.failure.removeListener(_onFailure);
     _session.dispose();
@@ -254,6 +313,8 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
       setState(() {
         _tracking = tracking;
         _issue = frame.issue;
+        // A surface turned up after all.
+        if (tracking == _Tracking.ready) _searchIsSlow = false;
       });
     }
   }
@@ -315,6 +376,22 @@ class _TrackedSurfaceState extends State<_TrackedSurface> {
   Widget? get _banner {
     if (_notice != null) {
       return HintBanner(text: _notice!, icon: Icons.touch_app_rounded);
+    }
+    final searching =
+        _tracking == _Tracking.starting ||
+        _tracking == _Tracking.limited ||
+        _tracking == _Tracking.searching;
+    if (_searchIsSlow && searching) {
+      // Still nothing: say why if ARCore knows, and offer the way out.
+      return HintBanner(
+        text: _issue == TrackingIssue.none
+            ? 'Still looking. Try a lit, patterned surface'
+            : _issue.advice,
+        icon: Icons.warning_amber_rounded,
+        color: Palette.caution,
+        action: 'Place on screen',
+        onAction: widget.onGiveUp,
+      );
     }
     if (_issue != TrackingIssue.none && _tracking != _Tracking.anchored) {
       return HintBanner(
@@ -588,6 +665,49 @@ class _CameraError extends StatelessWidget {
               size: 40,
             ),
             Text('The camera is not available', style: AppText.caption),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown while the phone is asked whether it supports surface tracking.
+class _CheckingSupport extends StatelessWidget {
+  const _CheckingSupport();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Palette.ink,
+      body: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GlassIconButton(
+              icon: Icons.arrow_back_rounded,
+              tooltip: 'Back',
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+            const Spacer(),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 18,
+                children: [
+                  const SizedBox.square(
+                    dimension: 26,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Palette.ember,
+                    ),
+                  ),
+                  Text('Checking for surface tracking', style: AppText.label),
+                ],
+              ),
+            ),
+            const Spacer(flex: 2),
           ],
         ),
       ),

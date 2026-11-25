@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ar/ar_session.dart';
 import '../engine/scene_frame.dart';
 import '../engine/scene_renderer.dart';
 import '../engine/volcano_controller.dart';
@@ -31,6 +32,13 @@ class _HomeScreenState extends State<HomeScreen> {
     ..labels = false
     ..labelsT = 0;
   final OrbitCamera _camera = OrbitCamera(elevation: 17 * math.pi / 180);
+
+  @override
+  void initState() {
+    super.initState();
+    // Ask about AR support now, so Surface can go straight to tracking.
+    ArSession.warmUp();
+  }
 
   @override
   void dispose() {

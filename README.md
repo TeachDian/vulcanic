@@ -12,6 +12,12 @@ what it does. It works three ways:
 | **Marker** | Marker-based: a printed code, tracked in 3D | Any phone with a camera |
 | **3D explorer** | None: orbit the model on a plain backdrop | Nothing |
 
+Surface tracking is always tried first. The app asks ARCore about the phone
+as soon as it opens, waits for a slow first answer rather than assuming the
+worst, and offers to install Google Play Services for AR if that is all that
+is missing. If no surface turns up after twenty seconds it says why and
+offers screen placement.
+
 Phones without ARCore are detected at run time. On them, Surface becomes
 *screen placement* (tap the camera view to put the volcano there), and
 Marker works exactly as it does everywhere else.
