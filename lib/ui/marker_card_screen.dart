@@ -1,6 +1,10 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../content/markers.dart';
+import '../media/gallery.dart';
 import 'marker_card.dart';
 import 'scene/controls.dart';
 import 'theme.dart';
@@ -17,6 +21,35 @@ class MarkerCardScreen extends StatefulWidget {
 class _MarkerCardScreenState extends State<MarkerCardScreen> {
   final PageController _pages = PageController(viewportFraction: 0.86);
   int _page = 0;
+  final List<GlobalKey> _cards = [
+    for (final _ in VulcanicMarker.values) GlobalKey(),
+  ];
+  String? _saved;
+
+  /// Saves the marker on show to the gallery, large enough to print.
+  Future<void> _save() async {
+    final marker = VulcanicMarker.values[_page];
+    final boundary =
+        _cards[_page].currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
+    if (boundary == null) return;
+    final image = await boundary.toImage(
+      pixelRatio: 1600 / boundary.size.width,
+    );
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    if (data == null) return;
+    final name = await Gallery.savePng(
+      data.buffer.asUint8List(),
+      'vulcanic-marker-${marker.number}',
+    );
+    if (!mounted) return;
+    setState(
+      () => _saved = name == null
+          ? 'Could not save the marker'
+          : 'Saved to Pictures/Vulcanic',
+    );
+  }
 
   @override
   void dispose() {
@@ -34,10 +67,20 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: GlassIconButton(
-                icon: Icons.arrow_back_rounded,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
+              child: Row(
+                children: [
+                  GlassIconButton(
+                    icon: Icons.arrow_back_rounded,
+                    tooltip: 'Back',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                  const Spacer(),
+                  GlassIconButton(
+                    icon: Icons.download_rounded,
+                    tooltip: 'Save this marker to the gallery',
+                    onPressed: _save,
+                  ),
+                ],
               ),
             ),
             Padding(
@@ -47,15 +90,18 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
               child: Text(
-                'Print one, or show it on another screen and point this '
-                'phone at it.',
+                'Show one on another screen, or save it and print it, then '
+                'point a phone at it.',
                 style: AppText.body,
               ),
             ),
             Expanded(
               child: PageView(
                 controller: _pages,
-                onPageChanged: (page) => setState(() => _page = page),
+                onPageChanged: (page) => setState(() {
+                  _page = page;
+                  _saved = null;
+                }),
                 children: [
                   for (final m in VulcanicMarker.values)
                     Padding(
@@ -63,7 +109,12 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
                         horizontal: 8,
                         vertical: 20,
                       ),
-                      child: Center(child: MarkerCard(marker: m)),
+                      child: Center(
+                        child: RepaintBoundary(
+                          key: _cards[m.index],
+                          child: MarkerCard(marker: m),
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -82,7 +133,10 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
                           '${VulcanicMarker.values.length.toString().padLeft(2, '0')}',
                           style: AppText.overline,
                         ),
-                        Text(marker.caption, style: AppText.bodyStrong),
+                        Text(
+                          _saved ?? marker.caption,
+                          style: AppText.bodyStrong,
+                        ),
                       ],
                     ),
                   ),

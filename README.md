@@ -2,80 +2,93 @@
 
 An interactive AR volcano for Android, built with Flutter.
 
-Place a stratovolcano on a real surface (markerless, ARCore) or on a printed
-marker, trigger an eruption, open a cutaway, and explore its five components.
+Stand a stratovolcano on your desk, set off an eruption, open a cutaway down
+to the magma chamber, and tap any of its five components to read or hear
+what it does. It works three ways:
 
-Work in progress — features land one pull request at a time.
+| Mode | Tracking | Needs |
+| ---- | -------- | ----- |
+| **Surface** | Markerless: ARCore plane detection and anchoring | An ARCore phone |
+| **Marker** | Marker-based: a printed code, tracked in 3D | Any phone with a camera |
+| **3D explorer** | None: orbit the model on a plain backdrop | Nothing |
 
-## The app
+Phones without ARCore are detected at run time. On them, Surface becomes
+*screen placement* (tap the camera view to put the volcano there), and
+Marker works exactly as it does everywhere else.
 
-- **Home** — a live volcano and the ways to view it.
-- **Surface** — markerless AR. ARCore detects a table or floor, a tap anchors
-  the volcano there, and you can walk around it.
-- **Marker** — marker-based AR. The volcano stands on a printed marker and
-  follows it; cover or remove the marker and it fades out.
-- **3D explorer** — the model on its own: drag to orbit, pinch to zoom.
-- **How it works** — illustrated instructions.
+<p>
+  <img src="docs/screenshots/home.png" width="24%" alt="Home screen">
+  <img src="docs/screenshots/explorer_erupting.png" width="24%" alt="Eruption with the cutaway open">
+  <img src="docs/screenshots/explorer_part.png" width="24%" alt="Component card">
+  <img src="docs/screenshots/markers.png" width="24%" alt="Marker gallery">
+</p>
 
-Every mode shares one set of controls (`lib/ui/scene/`): the eruption
-trigger with its four-step timeline, the cutaway and label toggles, numbered
-shortcuts to the five components, and a detail card for the selected one.
+## Run it
 
-The interface is set in [Sora](https://github.com/sora-xor/sora-font)
-(SIL Open Font License, see `assets/fonts/OFL.txt`).
+Requires Flutter 3.47+ and a phone on Android 13 (API 33) or newer.
 
-## Markerless tracking
-
-ARCore does the tracking; Flutter draws everything.
-
-```
-ARCore session (Kotlin, own GL thread)
-  ├─ camera image ──► Flutter texture ──► Texture widget
-  └─ per frame: view + projection matrices, anchor pose,
-     plane outlines, feature points, light estimate
-                     └─► EventChannel ──► ArFrame ──► painters
+```bash
+flutter run
 ```
 
-- `android/.../ar/ArSessionRunner.kt` runs the session and packs each frame.
-- `lib/ar/ar_session.dart` decodes it; `lib/ui/surface_screen.dart` turns it
-  into the screen: detected planes and feature points are drawn as an
-  overlay, a ring shows where a tap would land, and a tap hit-tests the
-  plane and creates an anchor.
-- The status pill and the hint above the dock report tracking quality and
-  the reason when it degrades (too dark, moving too fast, too little
-  surface detail).
+Build an installable APK:
 
-**Phones without ARCore** are detected at run time
-(`ArCoreApk.checkAvailability`) and get *screen placement* instead: the
-camera feed with the volcano placed wherever you tap, using an assumed
-camera pose (`lib/ar/placement.dart`). It is not anchored to the world. The
-grid button's neighbour in the top bar switches between the two on phones
-that support both, which is handy for demonstrating the difference.
+```bash
+flutter build apk --release --split-per-abi
+```
 
-## Marker tracking
+The APKs land in `build/app/outputs/flutter-apk/`; `app-arm64-v8a-release.apk`
+is the one for almost every current phone.
 
-Print a marker from [`docs/markers/`](docs/markers), or open *Markers* in the
-app on a second screen.
+## Using it
 
-- Each marker is a card with a QR code that carries its identity
-  (`VULCANIC:01`, `VULCANIC:02`), drawn by `lib/ui/marker_card.dart`. The app
-  shows different content per marker: 02 opens straight into the cutaway.
-- ML Kit finds the code and reports its four corners in the camera image.
-- `lib/ar/marker_pose.dart` turns those four corners into a 3D pose. It fits
-  the homography from the flat square to its image, then factors that into a
-  rotation and a translation. Distances are in units of the code's width, so
-  the marker can be printed at any size and the volcano scales with it.
-- `MarkerTracker` eases between detections and reports the marker lost when
-  they stop, which fades the volcano out.
+**Surface.** Point at a table or floor and move the phone slowly. Detected
+surfaces are outlined and a ring shows where the volcano would stand. Tap to
+place it, then walk around it. *Move* places it again; the grid button shows
+or hides what the tracker sees.
 
-This path needs only a camera, so it works on phones without ARCore. It
-assumes a typical field of view, because the scanner does not report the
-lens intrinsics.
+**Marker.** Print a marker from [`docs/markers/`](docs/markers), or open
+*Markers* in the app on a second device (the download button there saves a
+printable copy to the gallery). Point the camera at it: the
+volcano stands on the marker and follows it as it moves. Cover the marker or
+take it out of view and the volcano fades out until it returns. Marker 02
+opens straight into the cutaway.
 
-## The model
+**Everywhere.** Drag to turn, pinch to resize. *Erupt* plays a four-step
+sequence (magma rises, eruption, lava flows, cooling). *Inside* opens the
+cutaway. Tap a label or a number to open a component's card, and *Listen* to
+have it read aloud. The camera button saves a picture to the gallery.
 
-The volcano is assembled from five separately modeled components, each a
-plain OBJ file in `assets/models/`:
+## How it is built
+
+```mermaid
+flowchart LR
+  subgraph Android
+    ARCore[ARCore session<br/>planes, anchors, light]
+    Scanner[CameraX + ML Kit<br/>code corners]
+  end
+  subgraph Flutter
+    AR[ArFrame<br/>view, projection, anchor]
+    Pose[MarkerPose<br/>homography to 3D pose]
+    Orbit[OrbitCamera]
+    Renderer[SceneRenderer<br/>Canvas.drawVertices]
+    UI[Shared controls<br/>dock, timeline, cards]
+  end
+  ARCore -- camera texture + packet per frame --> AR
+  Scanner -- preview + corners --> Pose
+  AR --> Renderer
+  Pose --> Renderer
+  Orbit --> Renderer
+  Renderer --> UI
+```
+
+One renderer serves every mode. It only needs a view, a projection and a
+model matrix, and each mode supplies them from a different source.
+
+### The model
+
+The volcano is five separately modeled components, each a plain OBJ file in
+`assets/models/`:
 
 | # | Component | File |
 | - | --------- | ---- |
@@ -85,29 +98,82 @@ plain OBJ file in `assets/models/`:
 | 04 | Main conduit | `conduit.obj` |
 | 05 | Surface lava flow | `lava.obj` |
 
-They are produced by `tool/forge_models.dart` and carry per-vertex colours,
-so they open directly in Blender. Re-export over a file to change the model;
-regenerate everything with:
+They are generated by `tool/forge_models.dart` and carry per-vertex colours,
+so they open directly in Blender (File → Import → Wavefront). Re-export over
+a file to change the model, or regenerate everything with:
 
 ```bash
 dart run tool/forge_models.dart
 ```
 
-## The renderer
+### The renderer
 
-`lib/engine/` draws the model with `Canvas.drawVertices` — no 3D engine or
-native rendering library. Triangles are transformed, culled and sorted on the
-CPU; see `scene_renderer.dart` for how ordering works without a depth buffer.
-The same renderer serves every mode: it only needs a view, a projection and a
-model matrix, whether those come from an orbit camera, ARCore or a marker.
+`lib/engine/` draws the model with `Canvas.drawVertices`: no 3D engine and
+no native rendering library. Triangles are transformed, culled and sorted on
+the CPU. A canvas has no depth buffer, so `scene_renderer.dart` orders the
+scene by splitting it into four quadrants that have a fixed far-to-near
+order from any viewpoint; the cutaway is the same structure used in reverse.
 
-## Requirements
+### Markerless tracking
 
-- Flutter 3.47 or newer
-- Android 13 (API 33) or newer
+ARCore does the tracking and Flutter draws everything.
 
-## Run
+- `android/.../ar/ArSessionRunner.kt` runs the session on its own GL thread.
+  It draws the camera image into a Flutter texture and packs each frame's
+  view and projection matrices, anchor pose, plane outlines, feature points
+  and light estimate into one array.
+- `lib/ar/ar_session.dart` decodes it. `lib/ui/surface_screen.dart` draws
+  the planes, feature points and placement ring, hit-tests a tap against a
+  plane and creates the anchor.
+- Tracking quality is shown live: the status pill, and a hint naming the
+  cause when it degrades (too dark, moving too fast, too little detail).
+
+### Marker tracking
+
+- The marker is a card with a QR code that carries its identity
+  (`VULCANIC:01`, `VULCANIC:02`), drawn by `lib/ui/marker_card.dart`.
+- ML Kit finds the code and reports its four corners.
+- `lib/ar/marker_pose.dart` turns four corners into a 3D pose: it fits the
+  homography from the flat square to its image, then factors that into a
+  rotation and a translation. Distances are in units of the code's width,
+  so the marker can be printed at any size.
+- `MarkerTracker` eases between detections and reports the marker lost when
+  they stop.
+
+### Narration
+
+`lib/narration/` reads a component's description with Android's
+text-to-speech, choosing a female English voice from those installed.
+
+## Limits worth knowing
+
+- **Screen placement is not anchored.** Without motion tracking the volcano
+  stays where it is on the screen, not in the room.
+- **Marker tracking assumes a typical camera field of view**, since the
+  scanner does not report lens intrinsics. Perspective can be slightly off
+  on unusual lenses. It also depends on the code being readable: glare,
+  motion blur, or a steep angle will drop the lock.
+- **Surface tracking needs light and texture.** Plain, glossy or dim
+  surfaces are found slowly or not at all.
+- **No occlusion.** The volcano always draws in front of real objects.
+- Triangles that cross the camera's near plane are dropped, which only
+  shows if you move the phone inside the model.
+
+## Tests
 
 ```bash
-flutter run
+flutter test
 ```
+
+Covers the OBJ parser, the model's structure, the eruption timeline, the
+AR packet decoder, placement and marker pose maths, voice selection, and
+the screens themselves. `test/engine/render_dump_test.dart` and
+`test/ui/screens_test.dart` also write PNGs to `build/renders/`.
+
+## Credits
+
+- Typeface: [Sora](https://github.com/sora-xor/sora-font), SIL Open Font
+  License (`assets/fonts/OFL.txt`).
+- Tracking: Google ARCore and ML Kit barcode scanning (via
+  [mobile_scanner](https://pub.dev/packages/mobile_scanner)).
+- Speech: [flutter_tts](https://pub.dev/packages/flutter_tts).
