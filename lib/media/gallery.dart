@@ -12,6 +12,15 @@ abstract final class Gallery {
   static Future<String?> savePng(Uint8List bytes, String name) =>
       _invoke('saveImage', {'bytes': bytes, 'name': name});
 
+  /// Turns the screen up to full brightness and keeps it awake, or puts
+  /// both back. Used while this phone is standing in for a printed marker.
+  static Future<void> present(bool on) async {
+    try {
+      await _channel.invokeMethod<void>('present', {'on': on});
+    } on PlatformException catch (_) {
+    } on MissingPluginException catch (_) {}
+  }
+
   static Future<String?> _invoke(String method, [Object? arguments]) async {
     try {
       return await _channel.invokeMethod<String>(method, arguments);

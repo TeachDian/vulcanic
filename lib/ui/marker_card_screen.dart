@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 import '../content/markers.dart';
 import '../media/gallery.dart';
@@ -25,6 +26,18 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
     for (final _ in VulcanicMarker.values) GlobalKey(),
   ];
   String? _saved;
+
+  /// Fills the screen with the marker on show.
+  void _present() {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        pageBuilder: (_, _, _) =>
+            MarkerFullScreen(marker: VulcanicMarker.values[_page]),
+        transitionsBuilder: (_, animation, _, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
 
   /// Saves the marker on show to the gallery, large enough to print.
   Future<void> _save() async {
@@ -76,6 +89,11 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
                   ),
                   const Spacer(),
                   BarButton(
+                    icon: Icons.fullscreen_rounded,
+                    tooltip: 'Show this marker full screen',
+                    onPressed: _present,
+                  ),
+                  BarButton(
                     icon: Icons.download_rounded,
                     tooltip: 'Save this marker to the gallery',
                     onPressed: _save,
@@ -90,8 +108,8 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
               child: Text(
-                'Show one on another screen, or save it and print it, then '
-                'point a phone at it.',
+                'Tap one to fill this screen with it, then point another '
+                'phone at it. Or save it and print it.',
                 style: AppText.body,
               ),
             ),
@@ -110,9 +128,12 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
                         vertical: 20,
                       ),
                       child: Center(
-                        child: RepaintBoundary(
-                          key: _cards[m.index],
-                          child: MarkerCard(marker: m),
+                        child: GestureDetector(
+                          onTap: _present,
+                          child: RepaintBoundary(
+                            key: _cards[m.index],
+                            child: MarkerCard(marker: m),
+                          ),
                         ),
                       ),
                     ),
@@ -159,6 +180,62 @@ class _MarkerCardScreenState extends State<MarkerCardScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The marker's code and nothing else, as large and as bright as the
+/// screen allows, so this phone can stand in for a printout. Tap to leave.
+class MarkerFullScreen extends StatefulWidget {
+  const MarkerFullScreen({super.key, required this.marker});
+  final VulcanicMarker marker;
+
+  @override
+  State<MarkerFullScreen> createState() => _MarkerFullScreenState();
+}
+
+class _MarkerFullScreenState extends State<MarkerFullScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Full brightness and no sleep. The system bars are left alone: hiding
+    // them makes Android cover the code with its own "full screen" tip the
+    // first time, and the code is as wide as the screen either way.
+    Gallery.present(true);
+  }
+
+  @override
+  void dispose() {
+    Gallery.present(false);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // Dark status icons, so the bar reads on white.
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        // White to the edges: it is the quiet zone a scanner looks for,
+        // and it lights the code evenly.
+        backgroundColor: Colors.white,
+        body: Semantics(
+          label:
+              'Marker ${widget.marker.number}, ${widget.marker.title}. '
+              'Tap to close.',
+          button: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).maybePop(),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: MarkerCode(marker: widget.marker),
+              ),
+            ),
+          ),
         ),
       ),
     );

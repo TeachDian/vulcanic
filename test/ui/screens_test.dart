@@ -174,6 +174,29 @@ void main() {
     expect(find.text('02 / 02'), findsOneWidget);
   });
 
+  testWidgets('a marker fills the screen and a tap leaves', (tester) async {
+    await pumpScreen(tester, const MarkerCardScreen());
+    await advance(tester, 1);
+    await tester.tap(find.byTooltip('Show this marker full screen'));
+    await advance(tester, 1);
+    expect(find.byType(MarkerFullScreen), findsOneWidget);
+    // Only the code: the square is as wide as the screen allows.
+    final code = tester.getSize(
+      find.descendant(
+        of: find.byType(MarkerFullScreen),
+        matching: find.byType(MarkerCode),
+      ),
+    );
+    expect(code.width, code.height);
+    expect(code.width, greaterThan(380));
+    await save(tester, 'screen_marker_full');
+
+    await tester.tap(find.byType(MarkerFullScreen));
+    await advance(tester, 1);
+    expect(find.byType(MarkerFullScreen), findsNothing);
+    expect(find.text('Markers'), findsOneWidget);
+  });
+
   // Writes the printable markers when asked to:
   //   flutter test test/ui/screens_test.dart --dart-define=PRINT_MARKERS=true
   testWidgets('renders the printable markers', (tester) async {

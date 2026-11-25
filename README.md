@@ -53,9 +53,10 @@ surfaces are outlined and a ring shows where the volcano would stand. Tap to
 place it, then walk around it. *Move* places it again; the grid button shows
 or hides what the tracker sees.
 
-**Marker.** Print a marker from [`docs/markers/`](docs/markers), or open
-*Markers* in the app on a second device (the download button there saves a
-printable copy to the gallery). Point the camera at it: the
+**Marker.** No printer needed: open *Markers* on a second phone and tap a
+marker. It fills the screen with the code at full brightness and keeps the
+screen awake; point the first phone at it. To print instead, use
+[`docs/markers/`](docs/markers) or the download button in *Markers*. Point the camera at it: the
 volcano stands on the marker and follows it as it moves. Cover the marker or
 take it out of view and the volcano fades out until it returns. Marker 02
 opens straight into the cutaway.
