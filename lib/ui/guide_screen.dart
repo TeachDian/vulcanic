@@ -41,7 +41,8 @@ const List<GuideSection> guideSections = [
     GuideStep(
       Icons.qr_code_2_rounded,
       'Get a marker',
-      'Print one, or open Markers on a second screen.',
+      'Open Markers on a second phone and tap one to fill the screen, or '
+          'print it.',
     ),
     GuideStep(
       Icons.center_focus_weak_rounded,

@@ -11,6 +11,7 @@ import android.view.PixelCopy
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -41,6 +42,7 @@ class MediaBridge(
     }
 
     fun dispose() {
+        present(false)
         channel.setMethodCallHandler(null)
         io.shutdown()
     }
@@ -48,6 +50,10 @@ class MediaBridge(
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "capture" -> capture(result)
+            "present" -> {
+                present(call.argument<Boolean>("on") == true)
+                result.success(null)
+            }
             "saveImage" -> {
                 val bytes = call.argument<ByteArray>("bytes")
                 val name = call.argument<String>("name") ?: "vulcanic"
@@ -61,6 +67,26 @@ class MediaBridge(
                 }
             }
             else -> result.notImplemented()
+        }
+    }
+
+    /**
+     * Full brightness and no sleep while the screen is being used as a
+     * marker for another phone's camera; back to the user's settings after.
+     */
+    private fun present(on: Boolean) {
+        val window = activity.window
+        val attributes = window.attributes
+        attributes.screenBrightness = if (on) {
+            WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
+        } else {
+            WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        }
+        window.attributes = attributes
+        if (on) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 

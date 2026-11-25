@@ -59,10 +59,7 @@ class MarkerCard extends StatelessWidget {
                   ],
                 ),
                 SizedBox(height: 6 * u),
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: CustomPaint(painter: _CodePainter(marker.payload)),
-                ),
+                MarkerCode(marker: marker),
                 const Spacer(),
                 Text(marker.title, style: text(7.5, 700, spacing: -0.2)),
                 SizedBox(height: 1.2 * u),
@@ -80,6 +77,19 @@ class MarkerCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The marker's code on its own, with the quiet zone a scanner needs and
+/// nothing else. Fills the square it is given.
+class MarkerCode extends StatelessWidget {
+  const MarkerCode({super.key, required this.marker});
+  final VulcanicMarker marker;
+
+  @override
+  Widget build(BuildContext context) => AspectRatio(
+    aspectRatio: 1,
+    child: CustomPaint(painter: _CodePainter(marker.payload)),
+  );
 }
 
 /// Draws the QR code for [payload], with the quiet zone a scanner needs.
