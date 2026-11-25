@@ -54,6 +54,7 @@ class _MarkerSceneState extends State<_MarkerScene> {
   _Lock _lock = _Lock.searching;
   VulcanicMarker? _marker;
   bool _foreignCode = false;
+  double _foreignSeenAt = 0;
   Size _imageSize = Size.zero;
   Size _viewSize = Size.zero;
   double _opacity = 0;
@@ -90,8 +91,9 @@ class _MarkerSceneState extends State<_MarkerScene> {
     }
     if (found == null || marker == null) {
       // A code, but not one of ours.
-      if (!_foreignCode && _tracker.lost && capture.barcodes.isNotEmpty) {
-        setState(() => _foreignCode = true);
+      if (_tracker.lost && capture.barcodes.isNotEmpty) {
+        _foreignSeenAt = _controller.clock;
+        if (!_foreignCode) setState(() => _foreignCode = true);
       }
       return;
     }
@@ -126,7 +128,14 @@ class _MarkerSceneState extends State<_MarkerScene> {
     // Fade out when the marker is covered or leaves the view.
     final target = lock == _Lock.locked ? 1.0 : 0.0;
     _opacity += (target - _opacity) * (1 - 1 / (1 + dt * 14));
-    if (lock != _lock) setState(() => _lock = lock);
+    // The warning about an unknown code clears once the code is gone.
+    final foreign = _foreignCode && _controller.clock - _foreignSeenAt < 1.5;
+    if (lock != _lock || foreign != _foreignCode) {
+      setState(() {
+        _lock = lock;
+        _foreignCode = foreign;
+      });
+    }
   }
 
   SceneFrame? _frame(Size size) {
