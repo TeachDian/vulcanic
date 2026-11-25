@@ -2,7 +2,7 @@ name: vulcanic
 description: "Interactive AR volcano with markerless and marker-based tracking."
 publish_to: 'none'
 
-version: 1.1.0+2
+version: 1.2.0+3
 
 environment:
   sdk: ^3.13.7
