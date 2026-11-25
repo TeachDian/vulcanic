@@ -82,6 +82,7 @@ class SceneRenderer {
     SceneFrame frame,
     VolcanoController state, {
     TextStyle? labelStyle,
+    EdgeInsets labelInsets = EdgeInsets.zero,
   }) {
     _labelRects.clear();
     bounds = null;
@@ -314,6 +315,7 @@ class SceneRenderer {
         camera,
         frame.opacity,
         labelStyle,
+        labelInsets,
       );
     }
   }
@@ -543,6 +545,7 @@ class SceneRenderer {
     Vector3 camera,
     double opacity,
     TextStyle? style,
+    EdgeInsets insets,
   ) {
     final g = geometry;
     style ??= const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600);
@@ -584,8 +587,14 @@ class SceneRenderer {
       final dot = Offset(s.$1, s.$2);
       const height = 30.0;
       final width = 12 + number.width + 7 + name.width + 13;
-      var left = side > 0 ? dot.dx + 26 : dot.dx - 26 - width;
-      left = left.clamp(8.0, math.max(8.0, size.width - width - 8));
+      // Labels sit on the outer side of the model, pulled in at the edges.
+      final minLeft = insets.left + 8;
+      final maxLeft = math.max(minLeft, size.width - insets.right - 8 - width);
+      final left = (side > 0 ? dot.dx + 26 : dot.dx - 26 - width).clamp(
+        minLeft,
+        maxLeft,
+      );
+      final attachRight = side < 0;
       var pill = Rect.fromLTWH(left, dot.dy - 22 - height / 2, width, height);
       // Nudge down past labels that are already placed.
       for (var tries = 0; tries < 4; tries++) {
@@ -611,7 +620,10 @@ class SceneRenderer {
       }
       int a(double v) => (v * base * 255).round().clamp(0, 255);
 
-      final attach = Offset(side > 0 ? pill.left : pill.right, pill.center.dy);
+      final attach = Offset(
+        attachRight ? pill.right : pill.left,
+        pill.center.dy,
+      );
       canvas.drawLine(
         dot,
         attach,

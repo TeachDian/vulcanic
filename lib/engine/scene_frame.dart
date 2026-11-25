@@ -98,6 +98,14 @@ class OrbitCamera {
 
   Matrix4 get view => makeViewMatrix(eye, target, Vector3(0, 1, 0));
 
+  /// Distance at which a sphere of [radius] around the target just fits a
+  /// viewport of [size], whichever dimension is the tighter one.
+  double distanceToFit(Size size, {required double radius}) {
+    final vertical = fieldOfView / 2;
+    final horizontal = math.atan(math.tan(vertical) * size.width / size.height);
+    return radius / math.sin(math.min(vertical, horizontal));
+  }
+
   Matrix4 projection(Size size) =>
       makePerspectiveMatrix(fieldOfView, size.width / size.height, 0.05, 100);
 
