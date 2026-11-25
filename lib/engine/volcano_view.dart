@@ -107,5 +107,6 @@ class _ScenePainter extends CustomPainter {
   bool shouldRepaint(_ScenePainter old) =>
       old.renderer != renderer ||
       old.controller != controller ||
+      old.frameFor != frameFor ||
       old.labelStyle != labelStyle;
 }

@@ -45,6 +45,8 @@ void main() {
       e.time = 6;
       expect(e.plume, greaterThan(0.9));
       expect(e.fragments, greaterThan(0.9));
+      e.time = 2;
+      expect(e.lavaHeat, 0, reason: 'no fresh lava before it reaches the rim');
       e.time = 12.5;
       expect(e.lavaReveal, closeTo(1, 1e-9));
       expect(e.lavaHeat, 1);
@@ -105,6 +107,20 @@ void main() {
 
       c.cutaway = false;
       expect(c.selected, isNull, reason: 'the chamber is no longer visible');
+    });
+
+    test('the highlight outlives the selection while it fades', () {
+      final c = VolcanoController()..select(VolcanoPart.lava);
+      for (var i = 0; i < 30; i++) {
+        c.tick(1 / 60, vent);
+      }
+      c.select(null);
+      expect(c.selected, isNull);
+      expect(c.highlighted, VolcanoPart.lava);
+      for (var i = 0; i < 60; i++) {
+        c.tick(1 / 60, vent);
+      }
+      expect(c.highlighted, isNull);
     });
 
     test('reset returns to the starting state', () {

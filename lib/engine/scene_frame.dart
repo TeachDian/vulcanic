@@ -34,7 +34,8 @@ class SceneFrame {
   /// Brightness multiplier for lit surfaces (AR light estimate).
   final double exposure;
 
-  /// Direction toward the light, in world space. Defaults to high front-left.
+  /// Direction toward the light, in view space, so the lit side always
+  /// faces the viewer. Defaults to high front-left.
   final Vector3? light;
 
   /// Whether to draw the soft contact shadow under the model.

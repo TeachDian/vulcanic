@@ -205,7 +205,7 @@ class SceneRenderer {
     final rising =
         smoothstep(0.2, 3.5, eruption.time) *
         (1 - smoothstep(13, 18, eruption.time));
-    final selected = state.selected?.index ?? -1;
+    final selected = state.highlighted?.index ?? -1;
     final selection = state.selectionT;
     final pulse = 0.5 + 0.5 * math.sin(clock * 3.2);
 
@@ -351,6 +351,7 @@ class SceneRenderer {
     const steps = 28;
     final radius = g.baseRadius * 1.1;
     var minX = double.infinity, maxX = -double.infinity;
+    var started = false;
     for (var i = 0; i < steps; i++) {
       final a = 2 * math.pi * i / steps;
       final s = _project(
@@ -361,8 +362,9 @@ class SceneRenderer {
         -g.blockDepth,
         radius * math.sin(a),
       );
-      if (s == null) return;
-      if (i == 0) {
+      if (s == null) continue;
+      if (!started) {
+        started = true;
         path.moveTo(s.$1, s.$2);
       } else {
         path.lineTo(s.$1, s.$2);
@@ -370,6 +372,7 @@ class SceneRenderer {
       minX = math.min(minX, s.$1);
       maxX = math.max(maxX, s.$1);
     }
+    if (!started) return;
     path.close();
     final sigma = ((maxX - minX) * 0.035).clamp(1.5, 28.0);
     canvas.drawPath(
@@ -543,7 +546,7 @@ class SceneRenderer {
   ) {
     final g = geometry;
     style ??= const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600);
-    if (!identical(style, _labelStyle)) {
+    if (style != _labelStyle) {
       _labelStyle = style;
       for (final painter in _textPainters.values) {
         painter.dispose();
@@ -599,7 +602,7 @@ class SceneRenderer {
       // it is fading.
       final settled = dimmed ? _dimmedLabel : 1.0;
       final fading = (alpha - settled).abs() > 0.02;
-      final base = fading ? 1.0 : alpha;
+      final base = fading ? settled : alpha;
       if (fading) {
         canvas.saveLayer(
           _labelRects[part]!.inflate(4),

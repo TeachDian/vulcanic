@@ -19,6 +19,7 @@ class VolcanoController extends ChangeNotifier {
   bool _cutaway = false;
   bool _labels = true;
   VolcanoPart? _selected;
+  VolcanoPart? _highlighted;
   EruptionPhase? _phase;
 
   /// Animated 0..1 companions of the toggles above.
@@ -41,6 +42,10 @@ class VolcanoController extends ChangeNotifier {
   bool get cutaway => _cutaway;
   bool get labels => _labels;
   VolcanoPart? get selected => _selected;
+
+  /// The part to draw emphasised. Follows [selected], but outlives it while
+  /// the highlight fades out, so deselecting does not flash the part grey.
+  VolcanoPart? get highlighted => _highlighted;
   double get scale => _scale;
   bool get transformed => rotation != 0 || _scale != 1;
 
@@ -65,6 +70,7 @@ class VolcanoController extends ChangeNotifier {
   void select(VolcanoPart? part) {
     if (_selected == part) return;
     _selected = part;
+    if (part != null) _highlighted = part;
     if (part != null && part.isInterior) _cutaway = true;
     notifyListeners();
   }
@@ -78,8 +84,9 @@ class VolcanoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns the eruption, the view toggles and the user transform to their
-  /// starting state.
+  /// Returns the eruption, the cutaway, the selection and the user transform
+  /// to their starting state. The labels toggle is a viewing preference and
+  /// is left alone.
   void reset() {
     eruption.reset();
     particles.clear();
@@ -108,6 +115,8 @@ class VolcanoController extends ChangeNotifier {
     cutawayT = _approach(cutawayT, _cutaway ? 1 : 0, dt * 3.2);
     labelsT = _approach(labelsT, _labels ? 1 : 0, dt * 5);
     selectionT = _approach(selectionT, _selected == null ? 0 : 1, dt * 5);
+
+    if (selectionT == 0) _highlighted = _selected;
 
     final phase = eruption.phase;
     if (phase != _phase || wasRunning != eruption.running) {

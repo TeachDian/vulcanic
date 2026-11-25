@@ -89,8 +89,10 @@ class Eruption {
     return 1 - (1 - t) * (1 - t);
   }
 
-  /// Temperature of the fresh lava: 1 molten, 0 crusted over.
-  double get lavaHeat => dormant ? 0 : 1 - smoothstep(13, 18, time);
+  /// Temperature of the fresh lava: 1 molten, 0 crusted over. Stays at zero
+  /// until lava reaches the rim, so the old flow does not light up early.
+  double get lavaHeat =>
+      smoothstep(4.6, 5.2, time) * (1 - smoothstep(13, 18, time));
 
   /// Ground tremor amplitude, 0..1.
   double get tremor =>
