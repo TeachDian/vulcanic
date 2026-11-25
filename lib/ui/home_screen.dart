@@ -98,11 +98,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const Spacer(),
-                Text('A volcano\non your desk.', style: Type.display),
+                Text('A volcano\non your desk.', style: AppText.display),
                 const SizedBox(height: 12),
                 Text(
                   'Place it, set it off, and look inside.',
-                  style: Type.body.copyWith(fontSize: 16),
+                  style: AppText.body.copyWith(fontSize: 16),
                 ),
                 const SizedBox(height: 24),
                 const Row(
@@ -161,7 +161,7 @@ class _Wordmark extends StatelessWidget {
         ),
         Text(
           'VULCANIC',
-          style: Type.overline.copyWith(
+          style: AppText.overline.copyWith(
             fontSize: 12.5,
             letterSpacing: 3.2,
             color: Palette.bone,
@@ -229,7 +229,7 @@ class _ModeCard extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(99),
                         ),
-                        child: Text(tag!, style: Type.caption),
+                        child: Text(tag!, style: AppText.caption),
                       )
                     else
                       const Icon(
@@ -240,9 +240,9 @@ class _ModeCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                Text(title, style: Type.title.copyWith(fontSize: 19)),
+                Text(title, style: AppText.title.copyWith(fontSize: 19)),
                 const SizedBox(height: 3),
-                Text(caption, style: Type.caption, maxLines: 1),
+                Text(caption, style: AppText.caption, maxLines: 1),
               ],
             ),
           ),
@@ -289,8 +289,8 @@ class _WideCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: 2,
                   children: [
-                    Text(title, style: Type.title),
-                    Text(caption, style: Type.caption),
+                    Text(title, style: AppText.title),
+                    Text(caption, style: AppText.caption),
                   ],
                 ),
               ),

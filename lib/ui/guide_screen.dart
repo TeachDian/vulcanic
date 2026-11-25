@@ -75,7 +75,7 @@ class GuideScreen extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 8),
               sliver: SliverToBoxAdapter(
-                child: Text('How it\nworks', style: Type.display),
+                child: Text('How it\nworks', style: AppText.display),
               ),
             ),
             for (final section in guideSections)
@@ -107,9 +107,9 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(section.overline, style: Type.overline),
+          Text(section.overline, style: AppText.overline),
           const SizedBox(height: 6),
-          Text(section.title, style: Type.headline),
+          Text(section.title, style: AppText.headline),
           const SizedBox(height: 12),
           for (final (i, step) in section.steps.indexed)
             Padding(
@@ -143,7 +143,7 @@ class _SectionCard extends StatelessWidget {
                           ),
                           child: Text(
                             '${i + 1}',
-                            style: Type.label.copyWith(
+                            style: AppText.label.copyWith(
                               fontSize: 10.5,
                               color: const Color(0xFF1A0E08),
                             ),
@@ -158,10 +158,10 @@ class _SectionCard extends StatelessWidget {
                       spacing: 3,
                       children: [
                         const SizedBox(height: 4),
-                        Text(step.title, style: Type.title),
+                        Text(step.title, style: AppText.title),
                         Text(
                           step.detail,
-                          style: Type.body.copyWith(fontSize: 14),
+                          style: AppText.body.copyWith(fontSize: 14),
                         ),
                       ],
                     ),

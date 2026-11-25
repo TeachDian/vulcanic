@@ -64,9 +64,9 @@ class PartSheet extends StatelessWidget {
                       Text(
                         'COMPONENT ${part.number} OF '
                         '${VolcanoPart.values.length.toString().padLeft(2, '0')}',
-                        style: Type.overline,
+                        style: AppText.overline,
                       ),
-                      Text(part.label, style: Type.headline),
+                      Text(part.label, style: AppText.headline),
                     ],
                   ),
                 ),
@@ -79,15 +79,17 @@ class PartSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 8,
-                children: [
-                  Text(info.tagline, style: Type.bodyStrong),
-                  Text(info.description, style: Type.body),
-                ],
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(right: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 8,
+                  children: [
+                    Text(info.tagline, style: AppText.bodyStrong),
+                    Text(info.description, style: AppText.body),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -149,8 +151,8 @@ class _FactChip extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 2,
             children: [
-              Text(fact.label, style: Type.caption.copyWith(fontSize: 10.5)),
-              Text(fact.value, style: Type.label),
+              Text(fact.label, style: AppText.caption.copyWith(fontSize: 10.5)),
+              Text(fact.value, style: AppText.label),
             ],
           ),
         ],

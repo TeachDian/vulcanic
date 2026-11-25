@@ -34,9 +34,13 @@ Future<void> loadFonts() async {
   }
 }
 
-Future<void> pumpScreen(WidgetTester tester, Widget screen) async {
+Future<void> pumpScreen(
+  WidgetTester tester,
+  Widget screen, {
+  Size size = const Size(824, 1830),
+}) async {
   tester.view
-    ..physicalSize = const Size(824, 1830)
+    ..physicalSize = size
     ..devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -116,5 +120,19 @@ void main() {
     await advance(tester, 1);
     expect(find.text('COMPONENT 04 OF 05'), findsNothing);
     expect(find.text('Reset'), findsOneWidget);
+  });
+
+  testWidgets('the detail card fits a short screen', (tester) async {
+    // 360 x 592 logical pixels; an overflow would fail the test.
+    await pumpScreen(
+      tester,
+      ExplorerScreen(geometry: geometry),
+      size: const Size(720, 1184),
+    );
+    await advance(tester, 1);
+    await tester.tap(find.text('01'));
+    await advance(tester, 1);
+    expect(find.text('COMPONENT 01 OF 05'), findsOneWidget);
+    await save(tester, 'screen_explorer_short');
   });
 }

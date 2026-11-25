@@ -31,7 +31,7 @@ abstract final class Palette {
 }
 
 /// Type scale, all in Sora.
-abstract final class Type {
+abstract final class AppText {
   static const String family = 'Sora';
 
   static TextStyle _style(
@@ -97,15 +97,15 @@ ThemeData buildTheme() {
     brightness: Brightness.dark,
     colorScheme: scheme,
     scaffoldBackgroundColor: Palette.ink,
-    fontFamily: Type.family,
+    fontFamily: AppText.family,
     splashFactory: InkSparkle.splashFactory,
     textTheme: TextTheme(
-      displaySmall: Type.display,
-      headlineSmall: Type.headline,
-      titleMedium: Type.title,
-      bodyMedium: Type.body,
-      labelLarge: Type.label,
-      bodySmall: Type.caption,
+      displaySmall: AppText.display,
+      headlineSmall: AppText.headline,
+      titleMedium: AppText.title,
+      bodyMedium: AppText.body,
+      labelLarge: AppText.label,
+      bodySmall: AppText.caption,
     ),
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {TargetPlatform.android: FadeForwardsPageTransitionsBuilder()},

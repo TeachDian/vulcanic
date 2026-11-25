@@ -96,48 +96,59 @@ class SceneChrome extends StatelessWidget {
                         ...trailing,
                       ],
                     ),
-                    const Spacer(),
-                    ?banner,
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 280),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween(
-                            begin: const Offset(0, 0.12),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      ),
-                      layoutBuilder: (current, previous) => Stack(
-                        alignment: Alignment.bottomCenter,
-                        children: [...previous, ?current],
-                      ),
-                      child: !showControls
-                          ? const SizedBox(key: ValueKey('none'))
-                          : selected != null
-                          ? PartSheet(
-                              key: const ValueKey('sheet'),
-                              part: selected,
-                              controller: controller,
-                              leading: sheetLeading,
-                            )
-                          : Column(
-                              key: const ValueKey('dock'),
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                PartRail(controller: controller),
-                                const SizedBox(height: 14),
-                                PhaseStrip(controller: controller),
-                                ControlDock(
-                                  controller: controller,
-                                  modeAction: modeAction,
-                                ),
-                              ],
+                    // The dock or the detail card, pinned to the bottom. The
+                    // card shrinks and scrolls on short screens.
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ?banner,
+                          Flexible(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 280),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              transitionBuilder: (child, animation) =>
+                                  FadeTransition(
+                                    opacity: animation,
+                                    child: SlideTransition(
+                                      position: Tween(
+                                        begin: const Offset(0, 0.12),
+                                        end: Offset.zero,
+                                      ).animate(animation),
+                                      child: child,
+                                    ),
+                                  ),
+                              layoutBuilder: (current, previous) => Stack(
+                                alignment: Alignment.bottomCenter,
+                                children: [...previous, ?current],
+                              ),
+                              child: !showControls
+                                  ? const SizedBox(key: ValueKey('none'))
+                                  : selected != null
+                                  ? PartSheet(
+                                      key: const ValueKey('sheet'),
+                                      part: selected,
+                                      controller: controller,
+                                      leading: sheetLeading,
+                                    )
+                                  : Column(
+                                      key: const ValueKey('dock'),
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        PartRail(controller: controller),
+                                        const SizedBox(height: 14),
+                                        PhaseStrip(controller: controller),
+                                        ControlDock(
+                                          controller: controller,
+                                          modeAction: modeAction,
+                                        ),
+                                      ],
+                                    ),
                             ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 );
@@ -193,7 +204,7 @@ class StatusPill extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Type.label,
+                style: AppText.label,
               ),
             ),
           ],

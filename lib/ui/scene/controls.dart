@@ -79,7 +79,7 @@ class _DockButton extends StatelessWidget {
               : null,
           radius: 34,
           child: SizedBox(
-            width: 60,
+            width: double.infinity,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -104,7 +104,7 @@ class _DockButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.fade,
                   softWrap: false,
-                  style: Type.caption.copyWith(
+                  style: AppText.caption.copyWith(
                     fontSize: 10.5,
                     color: action.active ? Palette.bone : Palette.ash,
                   ),
@@ -178,7 +178,7 @@ class EruptButton extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 2),
-            Text(label, style: Type.label.copyWith(fontSize: 11.5)),
+            Text(label, style: AppText.label.copyWith(fontSize: 11.5)),
           ],
         ),
       ),
@@ -231,35 +231,41 @@ class ControlDock extends StatelessWidget {
         radius: 36,
         padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _DockButton(
-              DockAction(
-                icon: Icons.pie_chart_outline_rounded,
-                label: 'Inside',
-                active: controller.cutaway,
-                onPressed: () => controller.cutaway = !controller.cutaway,
+            Expanded(
+              child: _DockButton(
+                DockAction(
+                  icon: Icons.pie_chart_outline_rounded,
+                  label: 'Inside',
+                  active: controller.cutaway,
+                  onPressed: () => controller.cutaway = !controller.cutaway,
+                ),
               ),
             ),
-            _DockButton(
-              DockAction(
-                icon: Icons.sell_outlined,
-                label: 'Labels',
-                active: controller.labels,
-                onPressed: () => controller.labels = !controller.labels,
+            Expanded(
+              child: _DockButton(
+                DockAction(
+                  icon: Icons.sell_outlined,
+                  label: 'Labels',
+                  active: controller.labels,
+                  onPressed: () => controller.labels = !controller.labels,
+                ),
               ),
             ),
             EruptButton(controller: controller),
-            if (modeAction != null)
-              _DockButton(modeAction!)
-            else
-              const SizedBox(width: 60),
-            _DockButton(
-              DockAction(
-                icon: Icons.restart_alt_rounded,
-                label: 'Reset',
-                onPressed: controller.reset,
+            Expanded(
+              child: modeAction == null
+                  ? const SizedBox.shrink()
+                  : _DockButton(modeAction!),
+            ),
+            Expanded(
+              child: _DockButton(
+                DockAction(
+                  icon: Icons.restart_alt_rounded,
+                  label: 'Reset',
+                  onPressed: controller.reset,
+                ),
               ),
             ),
           ],
@@ -315,7 +321,7 @@ class PhaseStrip extends StatelessWidget {
                                 maxLines: 1,
                                 softWrap: false,
                                 overflow: TextOverflow.fade,
-                                style: Type.caption.copyWith(
+                                style: AppText.caption.copyWith(
                                   fontSize: 10.5,
                                   color: step == phase
                                       ? Palette.bone
@@ -444,7 +450,7 @@ class _RailButton extends StatelessWidget {
           ),
           child: Text(
             part.number,
-            style: Type.label.copyWith(
+            style: AppText.label.copyWith(
               fontSize: 12,
               color: selected ? const Color(0xFF1A0E08) : Palette.ash,
               fontFeatures: const [FontFeature.tabularFigures()],

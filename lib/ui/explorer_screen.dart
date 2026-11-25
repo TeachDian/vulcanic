@@ -87,7 +87,7 @@ class _ExplorerScreenState extends State<ExplorerScreen> {
             renderer: _renderer,
             controller: _controller,
             frameFor: _frame,
-            labelStyle: Type.label,
+            labelStyle: AppText.label,
           ),
         ),
       ),
